@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutGrid, List, Plus } from 'lucide-react'
+import { LayoutGrid, List, Loader2, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -9,23 +9,32 @@ import { AssetFiltersBar } from '@/components/assets/AssetFilters'
 import { AssetTable } from '@/components/assets/AssetTable'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PaginationBar } from '@/components/shared/PaginationBar'
 import { Button } from '@/components/ui/button'
 import { type AssetFilters, useAssets } from '@/lib/hooks/useAssets'
 import { canEdit } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
 
+const PAGE_SIZE = 25
+
 export default function AssetsPage() {
   const [view, setView] = useState<'table' | 'card'>('table')
   const [filters, setFilters] = useState<AssetFilters>({})
-  const { data: assets } = useAssets(filters)
+  const [page, setPage] = useState(1)
+  const { data: assets, totalCount, isLoading } = useAssets(filters, page, PAGE_SIZE)
   const { user } = useAuth()
   const canCreate = user ? canEdit(user.role) : false
+
+  function handleFiltersChange(next: AssetFilters) {
+    setFilters(next)
+    setPage(1) // reset to first page on filter change
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Assets"
-        description={`${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
+        description={isLoading ? 'Loading…' : `${totalCount} asset${totalCount !== 1 ? 's' : ''}`}
         action={
           canCreate ? (
             <Button asChild>
@@ -41,7 +50,7 @@ export default function AssetsPage() {
       <div className="flex items-center gap-2">
         <AssetFiltersBar
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={handleFiltersChange}
           showDepartmentFilter={canCreate}
         />
         <div className="ml-auto flex items-center gap-1 rounded-lg border p-1">
@@ -66,7 +75,11 @@ export default function AssetsPage() {
         </div>
       </div>
 
-      {assets.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        </div>
+      ) : assets.length === 0 ? (
         <EmptyState
           icon={List}
           title="No assets found"
@@ -91,6 +104,13 @@ export default function AssetsPage() {
           ))}
         </div>
       )}
+
+      <PaginationBar
+        page={page}
+        pageSize={PAGE_SIZE}
+        totalCount={totalCount}
+        onPageChange={setPage}
+      />
     </div>
   )
 }
