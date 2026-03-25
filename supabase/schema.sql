@@ -300,7 +300,7 @@ create policy "members can view their org"
 
 create policy "authenticated users can create org"
   on public.organizations for insert
-  with check (auth.role() = 'authenticated');
+  with check (auth.uid() is not null and owner_id = auth.uid());
 
 create policy "owner or admin can update org"
   on public.organizations for update
@@ -310,9 +310,12 @@ create policy "owner or admin can update org"
 -- profiles
 -- -------------------------------------------------------
 
-create policy "org members can view profiles"
+create policy "users can view profiles in their org"
   on public.profiles for select
-  using (org_id = public.get_my_org_id());
+  using (
+    id = (select auth.uid())           -- always see own profile (covers null org_id)
+    or org_id = public.get_my_org_id() -- see teammates once in an org
+  );
 
 -- Users can update their own profile; admins/owners can update anyone in the org
 create policy "users can update own profile"

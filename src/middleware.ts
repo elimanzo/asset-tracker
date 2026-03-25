@@ -23,7 +23,6 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session — getUser() validates the token server-side
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -40,7 +39,6 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith('/auth')
 
   if (!user) {
-    // Unauthenticated: only allow auth routes
     if (isAppRoute || isOnboardingRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
@@ -49,11 +47,24 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Authenticated from here on
-  const hasOrg = !!user.user_metadata?.org_id
+  // Authenticated — check org membership via DB (single primary-key lookup)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const hasOrg = !!profile?.org_id
 
   // Already logged in → don't show auth pages
   if (isAuthRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // Has org → don't show org creation page
+  if (hasOrg && pathname.startsWith('/org/new')) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

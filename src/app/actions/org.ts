@@ -2,21 +2,25 @@
 
 import { redirect } from 'next/navigation'
 
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateOrganizationInput } from '@/lib/types'
 
 export async function createOrganization(
   input: CreateOrganizationInput
 ): Promise<{ error: string } | never> {
+  // Auth check via server client (reads session from cookies)
   const supabase = await createClient()
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Insert the organization
-  const { data: org, error: orgError } = await supabase
+  // Use admin client for DB writes — bypasses RLS, safe because we've
+  // already verified the user identity above via getUser()
+  const admin = createAdminClient()
+
+  const { data: org, error: orgError } = await admin
     .from('organizations')
     .insert({ name: input.name, slug: input.slug, owner_id: user.id })
     .select('id')
@@ -29,15 +33,7 @@ export async function createOrganization(
     return { error: orgError.message }
   }
 
-  // Attach org to profile and mark account active
-  await supabase
-    .from('profiles')
-    .update({ org_id: org.id, invite_status: 'active' })
-    .eq('id', user.id)
-
-  // Store org_id in user metadata so middleware can read it from the JWT
-  // without making a DB call on every request
-  await supabase.auth.updateUser({ data: { org_id: org.id } })
+  await admin.from('profiles').update({ org_id: org.id, invite_status: 'active' }).eq('id', user.id)
 
   redirect('/setup/departments')
 }

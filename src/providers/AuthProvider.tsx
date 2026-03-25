@@ -49,24 +49,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const supabase = createClient()
+    let mounted = true
 
-    // onAuthStateChange fires immediately with INITIAL_SESSION — no need for
-    // a separate getSession() call, which would race for the same lock.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id)
-          setUser(profile)
-        } else {
+        if (!mounted) return
+        // Unblock the UI immediately — don't wait for the profile fetch
+        if (!session?.user) {
           setUser(null)
+          setIsLoading(false)
+          return
         }
         setIsLoading(false)
+        // Fetch profile in the background
+        try {
+          const profile = await fetchProfile(session.user.id)
+          if (mounted) setUser(profile)
+        } catch {
+          if (mounted) setUser(null)
+        }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signIn(email: string, password: string) {
