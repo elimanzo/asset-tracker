@@ -1,0 +1,101 @@
+'use client'
+
+import { Search, X } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ASSET_STATUS_CONFIG } from '@/lib/constants'
+import type { AssetFilters } from '@/lib/hooks/useAssets'
+import { useDepartments } from '@/lib/hooks/useDepartments'
+import { ASSET_STATUSES } from '@/lib/types'
+
+interface AssetFiltersBarProps {
+  filters: AssetFilters
+  onFiltersChange: (filters: AssetFilters) => void
+  showDepartmentFilter?: boolean
+}
+
+export function AssetFiltersBar({
+  filters,
+  onFiltersChange,
+  showDepartmentFilter = true,
+}: AssetFiltersBarProps) {
+  const { data: departments } = useDepartments()
+
+  const hasActiveFilters = !!(filters.search || filters.status || filters.departmentId)
+
+  function clearFilters() {
+    onFiltersChange({ search: '', status: '', departmentId: '' })
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative min-w-[200px] flex-1">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input
+          placeholder="Search by name, tag, category…"
+          value={filters.search ?? ''}
+          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          className="pl-9"
+        />
+      </div>
+
+      <Select
+        value={filters.status ?? ''}
+        onValueChange={(val) =>
+          onFiltersChange({
+            ...filters,
+            status: val === 'all' ? '' : (val as AssetFilters['status']),
+          })
+        }
+      >
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {ASSET_STATUSES.map((s) => (
+            <SelectItem key={s} value={s}>
+              {ASSET_STATUS_CONFIG[s].label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {showDepartmentFilter && (
+        <Select
+          value={filters.departmentId ?? ''}
+          onValueChange={(val) =>
+            onFiltersChange({ ...filters, departmentId: val === 'all' ? '' : val })
+          }
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All departments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All departments</SelectItem>
+            {departments.map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {hasActiveFilters && (
+        <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+          <X className="h-3.5 w-3.5" />
+          Clear
+        </Button>
+      )}
+    </div>
+  )
+}

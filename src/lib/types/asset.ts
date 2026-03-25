@@ -92,14 +92,14 @@ export type AssetWithRelations = Asset & {
 export const AssetFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(200),
   assetTag: z.string().min(1, 'Asset tag is required').max(50),
-  categoryId: z.string().uuid().nullable(),
-  departmentId: z.string().uuid('Department is required'),
-  locationId: z.string().uuid().nullable(),
+  categoryId: z.string().min(1).nullable(),
+  departmentId: z.string().min(1, 'Department is required'),
+  locationId: z.string().min(1).nullable(),
   status: AssetStatusSchema,
   purchaseDate: z.string().nullable(),
   purchaseCost: z.number({ error: 'Must be a number' }).nonnegative('Must be 0 or more').nullable(),
   warrantyExpiry: z.string().nullable(),
-  vendorId: z.string().uuid().nullable(),
+  vendorId: z.string().min(1).nullable(),
   notes: z.string().max(2000).optional(),
   imageUrl: z.string().url().nullable().optional(),
 })
