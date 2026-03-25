@@ -63,6 +63,7 @@ export function AssetsProvider({ children }: { children: React.ReactNode }) {
         updatedBy: createdBy,
       }
       setAssets((prev) => [newAsset, ...prev])
+      toast.success('Asset created')
       return newAsset
     },
     []
@@ -74,19 +75,25 @@ export function AssetsProvider({ children }: { children: React.ReactNode }) {
         a.id === id
           ? {
               ...a,
-              ...input,
+              name: input.name,
+              assetTag: input.assetTag,
+              categoryId: input.categoryId,
+              departmentId: input.departmentId,
               locationId: input.locationId ?? null,
+              status: input.status,
               purchaseDate: input.purchaseDate ?? null,
               purchaseCost: input.purchaseCost ?? null,
               warrantyExpiry: input.warrantyExpiry ?? null,
               vendorId: input.vendorId ?? null,
               notes: input.notes ?? null,
+              imageUrl: input.imageUrl ?? null,
               updatedAt: new Date().toISOString(),
               updatedBy,
             }
           : a
       )
     )
+    toast.success('Asset updated')
   }, [])
 
   const deleteAsset = useCallback((id: string) => {
