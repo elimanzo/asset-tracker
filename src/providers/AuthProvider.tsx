@@ -53,25 +53,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
-        if (!mounted) return
-        // Unblock the UI immediately — don't wait for the profile fetch
-        if (!session?.user) {
-          setUser(null)
-          setIsLoading(false)
-          return
-        }
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      if (!mounted) return
+      if (!session?.user) {
+        setUser(null)
         setIsLoading(false)
-        // Fetch profile in the background
-        try {
-          const profile = await fetchProfile(session.user.id)
-          if (mounted) setUser(profile)
-        } catch {
-          if (mounted) setUser(null)
-        }
+        return
       }
-    )
+      // Defer fetchProfile outside the onAuthStateChange callback to avoid a
+      // Web Locks deadlock: the auth library holds a lock during this callback,
+      // and fetchProfile internally acquires the same lock to read the session.
+      const userId = session.user.id
+      setTimeout(() => {
+        if (!mounted) return
+        fetchProfile(userId)
+          .then((profile) => {
+            if (mounted) setUser(profile)
+          })
+          .catch(() => {
+            if (mounted) setUser(null)
+          })
+          .finally(() => {
+            if (mounted) setIsLoading(false)
+          })
+      }, 0)
+    })
 
     return () => {
       mounted = false
