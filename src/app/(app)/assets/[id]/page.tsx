@@ -32,12 +32,13 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  if (!asset) notFound()
+  if (!asset) return notFound()
 
   const canEditAssets = user ? canEdit(user.role) : false
   const auditLogs = getAssetAuditLogs(asset.id)
 
   function handleReturn() {
+    // asset is non-null: guarded by `return notFound()` above
     returnAsset(asset!.id)
   }
 

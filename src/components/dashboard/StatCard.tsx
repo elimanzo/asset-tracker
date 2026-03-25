@@ -8,10 +8,18 @@ interface StatCardProps {
   value: string | number
   icon: LucideIcon
   description?: string
-  colorClass?: string
+  bgClass?: string
+  iconClass?: string
 }
 
-export function StatCard({ label, value, icon: Icon, description, colorClass }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  description,
+  bgClass,
+  iconClass,
+}: StatCardProps) {
   return (
     <Card className="shadow-sm">
       <CardContent className="p-5">
@@ -26,10 +34,10 @@ export function StatCard({ label, value, icon: Icon, description, colorClass }: 
           <div
             className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-              colorClass ?? 'bg-primary/10'
+              bgClass ?? 'bg-primary/10'
             )}
           >
-            <Icon className={cn('h-4.5 w-4.5', colorClass ? 'text-white' : 'text-primary')} />
+            <Icon className={cn('h-[18px] w-[18px]', iconClass ?? 'text-primary')} />
           </div>
         </div>
       </CardContent>

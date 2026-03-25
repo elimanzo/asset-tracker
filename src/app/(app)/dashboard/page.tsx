@@ -59,25 +59,29 @@ export default function DashboardPage() {
           value={activeCount}
           icon={CheckCircle}
           description={`${Math.round((activeCount / stats.totalAssets) * 100)}% of total`}
-          colorClass="bg-green-100 dark:bg-green-900/30"
+          bgClass="bg-green-500 dark:bg-green-600"
+          iconClass="text-white"
         />
         <StatCard
           label="In Maintenance"
           value={maintenanceCount}
           icon={Wrench}
-          colorClass="bg-amber-100 dark:bg-amber-900/30"
+          bgClass="bg-amber-500 dark:bg-amber-600"
+          iconClass="text-white"
         />
         <StatCard
           label="Retired"
           value={retiredCount}
           icon={AlertTriangle}
-          colorClass="bg-gray-100 dark:bg-gray-800"
+          bgClass="bg-slate-400 dark:bg-slate-600"
+          iconClass="text-white"
         />
         <StatCard
           label="Total Value"
           value={formatCurrency(stats.totalValue)}
           icon={DollarSign}
-          colorClass="bg-purple-100 dark:bg-purple-900/30"
+          bgClass="bg-violet-500 dark:bg-violet-600"
+          iconClass="text-white"
         />
       </div>
 

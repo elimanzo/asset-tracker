@@ -22,7 +22,7 @@ export default function EditAssetPage({ params }: EditAssetPageProps) {
     redirect('/assets')
   }
 
-  if (!asset) notFound()
+  if (!asset) return notFound()
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
