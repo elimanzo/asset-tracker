@@ -1,5 +1,6 @@
 'use client'
 
+import { Loader2 } from 'lucide-react'
 import { notFound, redirect } from 'next/navigation'
 import { use } from 'react'
 
@@ -15,11 +16,19 @@ interface EditAssetPageProps {
 
 export default function EditAssetPage({ params }: EditAssetPageProps) {
   const { id } = use(params)
+  const { data: asset, isLoading } = useAsset(id)
   const { user } = useAuth()
-  const { data: asset } = useAsset(id)
 
   if (user && !canEdit(user.role)) {
     redirect('/assets')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      </div>
+    )
   }
 
   if (!asset) return notFound()
