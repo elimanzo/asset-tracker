@@ -126,10 +126,10 @@ export default function DepartmentsPage() {
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="px-4">
             <SheetTitle>{editing ? 'Edit department' : 'New department'}</SheetTitle>
           </SheetHeader>
-          <div className="mt-6">
+          <div className="overflow-y-auto px-4 pb-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
