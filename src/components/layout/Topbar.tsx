@@ -51,9 +51,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       {/* Dark mode toggle */}
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="mr-1"
+        className="text-muted-foreground hover:text-foreground mr-1 h-8 w-8"
         onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
         aria-label="Toggle theme"
       >
