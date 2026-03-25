@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="bg-primary flex h-9 w-9 items-center justify-center rounded-xl shadow-md">
           <BoxesIcon className="text-primary-foreground h-5 w-5" />
         </div>
-        <span className="text-foreground text-xl font-bold">Asset Tracker</span>
+        <span className="text-foreground text-xl font-bold">Trackly</span>
       </div>
       <div className="w-full max-w-sm">{children}</div>
     </div>

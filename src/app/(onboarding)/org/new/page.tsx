@@ -80,7 +80,7 @@ export default function CreateOrgPage() {
                     <Input placeholder="acme-corp" {...field} />
                   </FormControl>
                   <p className="text-muted-foreground text-xs">
-                    Used in your workspace URL: asset-tracker.app/
+                    Used in your workspace URL: trackly.app/
                     <strong>{field.value || 'your-org'}</strong>
                   </p>
                   <FormMessage />

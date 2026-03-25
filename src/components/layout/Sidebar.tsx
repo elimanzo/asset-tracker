@@ -92,7 +92,7 @@ export function Sidebar({ onNavClick }: SidebarProps) {
           <BoxesIcon className="text-sidebar-primary-foreground h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-sidebar-foreground truncate text-sm font-semibold">Asset Tracker</p>
+          <p className="text-sidebar-foreground truncate text-sm font-semibold">Trackly</p>
           {org && <p className="text-muted-foreground truncate text-xs">{org.name}</p>}
         </div>
       </div>

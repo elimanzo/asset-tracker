@@ -24,7 +24,7 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
           <div className="bg-primary flex h-7 w-7 items-center justify-center rounded-lg shadow-sm">
             <BoxesIcon className="text-primary-foreground h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold">Asset Tracker</span>
+          <span className="text-sm font-semibold">Trackly</span>
         </div>
         <span className="text-muted-foreground ml-4 text-xs">Organization Setup</span>
       </header>

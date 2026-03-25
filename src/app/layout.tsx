@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: { default: 'Asset Tracker', template: '%s | Asset Tracker' },
+  title: { default: 'Trackly', template: '%s | Trackly' },
   description: "Track and manage your organization's physical assets.",
 }
 
