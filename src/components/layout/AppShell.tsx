@@ -1,32 +1,17 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useAuth } from '@/providers/AuthProvider'
-import { useOrg } from '@/providers/OrgProvider'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
-  const { onboardingCompleted } = useOrg()
-  const router = useRouter()
+  const { isLoading } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  useEffect(() => {
-    if (isLoading) return
-    if (!user) {
-      router.replace('/login')
-      return
-    }
-    if (!onboardingCompleted) {
-      router.replace('/org/new')
-    }
-  }, [isLoading, user, onboardingCompleted, router])
-
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="bg-background flex h-screen items-center justify-center">
         <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
