@@ -119,5 +119,10 @@ export async function removeUserAction(
     .eq('id', userId)
     .eq('org_id', profile.org_id)
 
-  return { error: error?.message ?? null }
+  if (error) return { error: error.message }
+
+  // Delete the auth user so they can be re-invited cleanly later
+  await admin.auth.admin.deleteUser(userId)
+
+  return { error: null }
 }
