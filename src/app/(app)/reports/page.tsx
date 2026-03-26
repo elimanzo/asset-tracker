@@ -41,6 +41,16 @@ export default function ReportsPage() {
   const { org } = useOrg()
   const deptLabel = org?.departmentLabel ?? 'Department'
   const { data: categories } = useCategories()
+  const rc = org?.reportConfig ?? {}
+  const showAssignedTo = rc.showAssignedTo ?? true
+  const showDepartment = rc.showDepartment ?? true
+  const showCategory = rc.showCategory ?? true
+  const showLocation = rc.showLocation ?? false
+  const showStatus = rc.showStatus ?? true
+  const showPurchaseDate = rc.showPurchaseDate ?? false
+  const showPurchaseCost = rc.showPurchaseCost ?? false
+  const showWarrantyExpiry = rc.showWarrantyExpiry ?? false
+  const showVendor = rc.showVendor ?? false
 
   if (isLoading) return <PageLoader />
 
@@ -148,17 +158,37 @@ export default function ReportsPage() {
             <TableRow>
               <TableHead>Tag</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>{deptLabel}</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Cost</TableHead>
-              <TableHead>Warranty</TableHead>
+              {showAssignedTo && <TableHead>Assigned to</TableHead>}
+              {showDepartment && <TableHead>{deptLabel}</TableHead>}
+              {showCategory && <TableHead>Category</TableHead>}
+              {showLocation && <TableHead>Location</TableHead>}
+              {showStatus && <TableHead>Status</TableHead>}
+              {showPurchaseDate && <TableHead>Purchase date</TableHead>}
+              {showPurchaseCost && <TableHead>Cost</TableHead>}
+              {showWarrantyExpiry && <TableHead>Warranty</TableHead>}
+              {showVendor && <TableHead>Vendor</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {assets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground py-12 text-center text-sm">
+                <TableCell
+                  colSpan={
+                    2 +
+                    [
+                      showAssignedTo,
+                      showDepartment,
+                      showCategory,
+                      showLocation,
+                      showStatus,
+                      showPurchaseDate,
+                      showPurchaseCost,
+                      showWarrantyExpiry,
+                      showVendor,
+                    ].filter(Boolean).length
+                  }
+                  className="text-muted-foreground py-12 text-center text-sm"
+                >
                   No assets match the selected filters.
                 </TableCell>
               </TableRow>
@@ -169,25 +199,61 @@ export default function ReportsPage() {
                     <span className="font-mono text-xs">{a.assetTag}</span>
                   </TableCell>
                   <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-sm">{a.departmentName ?? '—'}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-sm">{a.categoryName ?? '—'}</span>
-                  </TableCell>
-                  <TableCell>
-                    <AssetStatusBadge status={a.status} />
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-sm">
-                      {a.purchaseCost != null ? formatCurrency(a.purchaseCost) : '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-sm">
-                      {a.warrantyExpiry ? formatDate(a.warrantyExpiry) : '—'}
-                    </span>
-                  </TableCell>
+                  {showAssignedTo && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">
+                        {a.currentAssignment?.assignedToName ?? '—'}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showDepartment && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">
+                        {a.departmentName ?? '—'}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showCategory && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">{a.categoryName ?? '—'}</span>
+                    </TableCell>
+                  )}
+                  {showLocation && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">{a.locationName ?? '—'}</span>
+                    </TableCell>
+                  )}
+                  {showStatus && (
+                    <TableCell>
+                      <AssetStatusBadge status={a.status} />
+                    </TableCell>
+                  )}
+                  {showPurchaseDate && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">
+                        {formatDate(a.purchaseDate)}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showPurchaseCost && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">
+                        {a.purchaseCost != null ? formatCurrency(a.purchaseCost) : '—'}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showWarrantyExpiry && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">
+                        {a.warrantyExpiry ? formatDate(a.warrantyExpiry) : '—'}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showVendor && (
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">{a.vendorName ?? '—'}</span>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

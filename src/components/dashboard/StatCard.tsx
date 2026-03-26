@@ -22,24 +22,22 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <Card className="shadow-sm">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              {label}
-            </p>
-            <p className="text-foreground mt-1 text-2xl font-bold">{value}</p>
-            {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
-          </div>
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center gap-2">
           <div
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+              'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8',
               bgClass ?? 'bg-primary/10'
             )}
           >
-            <Icon className={cn('h-[18px] w-[18px]', iconClass ?? 'text-primary')} />
+            <Icon className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', iconClass ?? 'text-primary')} />
           </div>
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase sm:text-sm">
+            {label}
+          </p>
         </div>
+        <p className="text-foreground mt-2.5 text-2xl font-bold">{value}</p>
+        {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
       </CardContent>
     </Card>
   )

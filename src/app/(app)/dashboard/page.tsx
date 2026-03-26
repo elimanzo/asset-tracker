@@ -10,7 +10,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRecentActivity } from '@/lib/hooks/useAuditLogs'
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { formatCompactCurrency } from '@/lib/utils/formatters'
 import { useAuth } from '@/providers/AuthProvider'
 import { useOrg } from '@/providers/OrgProvider'
 
@@ -73,7 +73,7 @@ export default function DashboardPage() {
         showCardMaintenance ||
         showCardRetired ||
         showCardValue) && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
           {showCardTotal && (
             <StatCard label="Total Assets" value={stats.totalAssets} icon={Package} />
           )}
@@ -93,7 +93,7 @@ export default function DashboardPage() {
           )}
           {showCardMaintenance && (
             <StatCard
-              label="In Maintenance"
+              label="Maintenance"
               value={maintenanceCount}
               icon={Wrench}
               bgClass="bg-amber-500 dark:bg-amber-600"
@@ -112,7 +112,7 @@ export default function DashboardPage() {
           {showCardValue && (
             <StatCard
               label="Total Value"
-              value={formatCurrency(stats.totalValue)}
+              value={formatCompactCurrency(stats.totalValue)}
               icon={DollarSign}
               bgClass="bg-violet-500 dark:bg-violet-600"
               iconClass="text-white"
