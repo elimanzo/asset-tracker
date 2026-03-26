@@ -54,7 +54,6 @@ export function AssetsProvider({ children }: { children: React.ReactNode }) {
         vendorId: input.vendorId ?? null,
         vendorName: null,
         notes: input.notes ?? null,
-        imageUrl: input.imageUrl ?? null,
         currentAssignment: null,
         deletedAt: null,
         createdAt: now,
@@ -86,7 +85,6 @@ export function AssetsProvider({ children }: { children: React.ReactNode }) {
               warrantyExpiry: input.warrantyExpiry ?? null,
               vendorId: input.vendorId ?? null,
               notes: input.notes ?? null,
-              imageUrl: input.imageUrl ?? null,
               updatedAt: new Date().toISOString(),
               updatedBy,
             }
