@@ -44,7 +44,7 @@ type OrgDataContextValue = {
   deleteVendor: (id: string) => Promise<void>
   users: ProfileWithDepartments[]
   pendingInvites: Invite[]
-  sendInvite: (email: string, role: Invite['role']) => Promise<void>
+  sendInvite: (email: string, role: Invite['role'], departmentIds?: string[]) => Promise<void>
   revokeInvite: (id: string) => void
   removeUser: (id: string) => void
   updateUserRole: (id: string, role: Exclude<UserRole, 'owner'>) => Promise<void>
@@ -417,8 +417,8 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
   // Users / Invites
   // -------------------------------------------------------------------------
   const sendInvite = useCallback(
-    async (email: string, role: Invite['role']) => {
-      const result = await sendInviteAction(email, role)
+    async (email: string, role: Invite['role'], departmentIds: string[] = []) => {
+      const result = await sendInviteAction(email, role, departmentIds)
       if (result?.error) {
         toast.error(result.error)
         return
