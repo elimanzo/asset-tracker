@@ -32,19 +32,19 @@ import { useAuth } from '@/providers/AuthProvider'
 
 type OrgDataContextValue = {
   departments: Department[]
-  createDepartment: (input: DepartmentFormInput) => Promise<void>
+  createDepartment: (input: DepartmentFormInput) => Promise<string | null>
   updateDepartment: (id: string, input: DepartmentFormInput) => Promise<void>
   deleteDepartment: (id: string) => Promise<void>
   categories: Category[]
-  createCategory: (input: CategoryFormInput) => Promise<void>
+  createCategory: (input: CategoryFormInput) => Promise<string | null>
   updateCategory: (id: string, input: CategoryFormInput) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
   locations: Location[]
-  createLocation: (input: LocationFormInput) => Promise<void>
+  createLocation: (input: LocationFormInput) => Promise<string | null>
   updateLocation: (id: string, input: LocationFormInput) => Promise<void>
   deleteLocation: (id: string) => Promise<void>
   vendors: Vendor[]
-  createVendor: (input: VendorFormInput) => Promise<void>
+  createVendor: (input: VendorFormInput) => Promise<string | null>
   updateVendor: (id: string, input: VendorFormInput) => Promise<void>
   deleteVendor: (id: string) => Promise<void>
   users: ProfileWithDepartments[]
@@ -254,14 +254,15 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
   // Departments
   // -------------------------------------------------------------------------
   const handleCreateDepartment = useCallback(
-    async (input: DepartmentFormInput) => {
+    async (input: DepartmentFormInput): Promise<string | null> => {
       const result = await createDepartment(input)
       if ('error' in result) {
         toast.error(result.error)
-        return
+        return null
       }
       toast.success('Department created')
       await refetch()
+      return result.id
     },
     [refetch]
   )
@@ -296,14 +297,15 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
   // Categories
   // -------------------------------------------------------------------------
   const handleCreateCategory = useCallback(
-    async (input: CategoryFormInput) => {
+    async (input: CategoryFormInput): Promise<string | null> => {
       const result = await createCategory(input)
       if ('error' in result) {
         toast.error(result.error)
-        return
+        return null
       }
       toast.success('Category created')
       await refetch()
+      return result.id
     },
     [refetch]
   )
@@ -338,14 +340,15 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
   // Locations
   // -------------------------------------------------------------------------
   const handleCreateLocation = useCallback(
-    async (input: LocationFormInput) => {
+    async (input: LocationFormInput): Promise<string | null> => {
       const result = await createLocation(input)
       if ('error' in result) {
         toast.error(result.error)
-        return
+        return null
       }
       toast.success('Location created')
       await refetch()
+      return result.id
     },
     [refetch]
   )
@@ -380,14 +383,15 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
   // Vendors
   // -------------------------------------------------------------------------
   const handleCreateVendor = useCallback(
-    async (input: VendorFormInput) => {
+    async (input: VendorFormInput): Promise<string | null> => {
       const result = await createVendor(input)
       if ('error' in result) {
         toast.error(result.error)
-        return
+        return null
       }
       toast.success('Vendor created')
       await refetch()
+      return result.id
     },
     [refetch]
   )
