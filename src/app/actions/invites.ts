@@ -10,7 +10,8 @@ import type { Invite } from '@/lib/types'
 
 export async function sendInviteAction(
   email: string,
-  role: Invite['role']
+  role: Invite['role'],
+  departmentIds: string[] = []
 ): Promise<{ error: string } | { error: null }> {
   email = email.toLowerCase().trim()
   const supabase = await createClient()
@@ -51,6 +52,7 @@ export async function sendInviteAction(
     invited_by: user.id,
     invited_by_name: profile.full_name,
     expires_at: expiresAt,
+    department_ids: departmentIds,
   })
 
   if (insertError) return { error: insertError.message }
@@ -116,6 +118,14 @@ export async function acceptInviteAction(
   // Set the user's password so they can log in with email + password going forward
   const { error: pwError } = await admin.auth.admin.updateUserById(user.id, { password })
   if (pwError) return { error: pwError.message }
+
+  // Apply pre-assigned departments from the invite
+  const deptIds = (invite.department_ids as string[] | null) ?? []
+  if (deptIds.length > 0) {
+    await admin
+      .from('user_departments')
+      .insert(deptIds.map((department_id: string) => ({ user_id: user.id, department_id })))
+  }
 
   // Mark invite accepted
   await admin

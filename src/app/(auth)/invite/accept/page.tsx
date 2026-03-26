@@ -55,6 +55,7 @@ export default function AcceptInvitePage() {
       return
     }
     toast.success('Welcome! Your account is ready.')
+    router.refresh()
     router.push('/dashboard')
   }
 

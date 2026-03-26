@@ -82,6 +82,7 @@ export default function UsersPage() {
 
   const { user: currentUser } = useAuth()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteDeptIds, setInviteDeptIds] = useState<string[]>([])
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [revokeId, setRevokeId] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<ProfileWithDepartments | null>(null)
@@ -110,9 +111,16 @@ export default function UsersPage() {
   }
 
   function onInvite(data: InviteFormInput) {
-    sendInvite(data.email, data.role)
+    sendInvite(data.email, data.role, inviteDeptIds)
     form.reset()
+    setInviteDeptIds([])
     setInviteOpen(false)
+  }
+
+  function toggleInviteDept(deptId: string) {
+    setInviteDeptIds((prev) =>
+      prev.includes(deptId) ? prev.filter((id) => id !== deptId) : [...prev, deptId]
+    )
   }
 
   function toggleDept(deptId: string) {
@@ -383,6 +391,28 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
+              {departments.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Departments (optional)</Label>
+                  <div className="space-y-2">
+                    {departments.map((dept) => (
+                      <div key={dept.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`invite-dept-${dept.id}`}
+                          checked={inviteDeptIds.includes(dept.id)}
+                          onCheckedChange={() => toggleInviteDept(dept.id)}
+                        />
+                        <label
+                          htmlFor={`invite-dept-${dept.id}`}
+                          className="cursor-pointer text-sm"
+                        >
+                          {dept.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
                   Cancel
