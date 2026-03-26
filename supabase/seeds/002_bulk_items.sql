@@ -42,13 +42,22 @@ declare
   a_sec_cameras    uuid := gen_random_uuid();
 
 begin
-  select id into v_org_id   from public.organizations limit 1;
-  select id, full_name into v_user_id, v_user_name
-    from public.profiles limit 1;
+  -- Find the org that seed 001 populated (has all 5 expected departments)
+  select d.org_id into v_org_id
+    from public.departments d
+    where d.name in ('IT', 'Operations', 'Finance', 'Human Resources', 'Marketing')
+    group by d.org_id
+    having count(*) = 5
+    limit 1;
 
   if v_org_id is null then
-    raise exception 'No organization found — run seed 001 first.';
+    raise exception 'No organization found with seed 001 departments — run seed 001 first.';
   end if;
+
+  select id, full_name into v_user_id, v_user_name
+    from public.profiles
+    where org_id = v_org_id
+    limit 1;
 
   -- resolve existing departments and locations by name
   select id into d_it      from public.departments where org_id = v_org_id and name = 'IT'               limit 1;
