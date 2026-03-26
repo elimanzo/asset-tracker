@@ -7,6 +7,7 @@ import {
   UserCheck,
   UserPlus,
 } from 'lucide-react'
+import Link from 'next/link'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -46,8 +47,12 @@ export function RecentActivity({ logs }: RecentActivityProps) {
               {logs.map((log) => {
                 const config = ACTION_CONFIG[log.action]
                 const Icon = config.icon
-                return (
-                  <li key={log.id} className="flex items-start gap-3 px-5 py-3">
+                const href =
+                  log.entityType === 'asset' && log.action !== 'deleted'
+                    ? `/assets/${log.entityId}`
+                    : null
+                const inner = (
+                  <>
                     <div className="bg-muted mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                       <Icon className={`h-3 w-3 ${config.color}`} />
                     </div>
@@ -62,6 +67,20 @@ export function RecentActivity({ logs }: RecentActivityProps) {
                     <time className="text-muted-foreground shrink-0 text-xs">
                       {formatRelativeTime(log.createdAt)}
                     </time>
+                  </>
+                )
+                return href ? (
+                  <li key={log.id}>
+                    <Link
+                      href={href}
+                      className="hover:bg-muted/50 flex items-start gap-3 px-5 py-3 transition-colors"
+                    >
+                      {inner}
+                    </Link>
+                  </li>
+                ) : (
+                  <li key={log.id} className="flex items-start gap-3 px-5 py-3">
+                    {inner}
                   </li>
                 )
               })}
