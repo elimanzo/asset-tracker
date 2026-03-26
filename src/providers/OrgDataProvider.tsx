@@ -7,6 +7,7 @@ import { createCategory, deleteCategory, updateCategory } from '@/app/actions/ca
 import { createDepartment, deleteDepartment, updateDepartment } from '@/app/actions/departments'
 import { sendInviteAction } from '@/app/actions/invites'
 import { createLocation, deleteLocation, updateLocation } from '@/app/actions/locations'
+import { updateUserDepartmentsAction, updateUserRoleAction } from '@/app/actions/users'
 import { createVendor, deleteVendor, updateVendor } from '@/app/actions/vendors'
 import { createClient } from '@/lib/supabase/client'
 import type {
@@ -18,6 +19,7 @@ import type {
   Location,
   LocationFormInput,
   ProfileWithDepartments,
+  UserRole,
   Vendor,
   VendorFormInput,
 } from '@/lib/types'
@@ -45,6 +47,8 @@ type OrgDataContextValue = {
   sendInvite: (email: string, role: Invite['role']) => Promise<void>
   revokeInvite: (id: string) => void
   removeUser: (id: string) => void
+  updateUserRole: (id: string, role: Exclude<UserRole, 'owner'>) => Promise<void>
+  updateUserDepartments: (id: string, departmentIds: string[]) => Promise<void>
   isLoading: boolean
 }
 
@@ -413,6 +417,32 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
     [refetch]
   )
 
+  const updateUserRole = useCallback(
+    async (id: string, role: Exclude<UserRole, 'owner'>) => {
+      const result = await updateUserRoleAction(id, role)
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Role updated')
+      await refetch()
+    },
+    [refetch]
+  )
+
+  const updateUserDepartments = useCallback(
+    async (id: string, departmentIds: string[]) => {
+      const result = await updateUserDepartmentsAction(id, departmentIds)
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Departments updated')
+      await refetch()
+    },
+    [refetch]
+  )
+
   return (
     <OrgDataContext.Provider
       value={{
@@ -437,6 +467,8 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
         sendInvite,
         revokeInvite,
         removeUser,
+        updateUserRole,
+        updateUserDepartments,
         isLoading,
       }}
     >

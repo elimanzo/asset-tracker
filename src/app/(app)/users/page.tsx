@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Mail, MoreHorizontal, Plus, Trash2, UserX } from 'lucide-react'
+import { Mail, MoreHorizontal, Pencil, Plus, Trash2, UserX } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import { PageLoader } from '@/components/shared/PageLoader'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -34,6 +36,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -41,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -50,6 +54,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { USER_ROLE_CONFIG } from '@/lib/constants'
+import type { ProfileWithDepartments } from '@/lib/types'
 import { UserRoleSchema } from '@/lib/types'
 import { formatRelativeTime } from '@/lib/utils/formatters'
 import { getInitials } from '@/lib/utils/formatters'
@@ -63,12 +68,26 @@ const InviteFormSchema = z.object({
 type InviteFormInput = z.infer<typeof InviteFormSchema>
 
 export default function UsersPage() {
-  const { users, isLoading, pendingInvites, sendInvite, revokeInvite, removeUser } = useOrgData()
+  const {
+    users,
+    departments,
+    isLoading,
+    pendingInvites,
+    sendInvite,
+    revokeInvite,
+    removeUser,
+    updateUserRole,
+    updateUserDepartments,
+  } = useOrgData()
 
   const { user: currentUser } = useAuth()
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [revokeId, setRevokeId] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<ProfileWithDepartments | null>(null)
+  const [editRole, setEditRole] =
+    useState<Exclude<ProfileWithDepartments['role'], 'owner'>>('viewer')
+  const [editDeptIds, setEditDeptIds] = useState<string[]>([])
 
   const form = useForm<InviteFormInput>({
     resolver: zodResolver(InviteFormSchema),
@@ -77,10 +96,29 @@ export default function UsersPage() {
 
   if (isLoading) return <PageLoader />
 
+  function openEdit(u: ProfileWithDepartments) {
+    setEditingUser(u)
+    setEditRole(u.role === 'owner' ? 'admin' : u.role)
+    setEditDeptIds(u.departmentIds)
+  }
+
+  async function saveEdit() {
+    if (!editingUser) return
+    await updateUserRole(editingUser.id, editRole)
+    await updateUserDepartments(editingUser.id, editDeptIds)
+    setEditingUser(null)
+  }
+
   function onInvite(data: InviteFormInput) {
     sendInvite(data.email, data.role)
     form.reset()
     setInviteOpen(false)
+  }
+
+  function toggleDept(deptId: string) {
+    setEditDeptIds((prev) =>
+      prev.includes(deptId) ? prev.filter((id) => id !== deptId) : [...prev, deptId]
+    )
   }
 
   return (
@@ -154,6 +192,11 @@ export default function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(u)}>
+                              <Pencil className="mr-2 h-3.5 w-3.5" />
+                              Edit role & departments
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => setRemoveId(u.id)}
@@ -232,6 +275,68 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+
+      {/* Edit role & departments sheet */}
+      <Sheet
+        open={editingUser !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingUser(null)
+        }}
+      >
+        <SheetContent>
+          <SheetHeader className="px-4">
+            <SheetTitle>Edit {editingUser?.fullName}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-6 overflow-y-auto px-4 pb-6">
+            {/* Role */}
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as typeof editRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['admin', 'editor', 'viewer'] as const).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {USER_ROLE_CONFIG[r].label} — {USER_ROLE_CONFIG[r].description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Departments */}
+            <div className="space-y-2">
+              <Label>Departments</Label>
+              {departments.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No departments created yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {departments.map((dept) => (
+                    <div key={dept.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={dept.id}
+                        checked={editDeptIds.includes(dept.id)}
+                        onCheckedChange={() => toggleDept(dept.id)}
+                      />
+                      <label htmlFor={dept.id} className="cursor-pointer text-sm">
+                        {dept.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button onClick={saveEdit}>Save changes</Button>
+              <Button variant="outline" onClick={() => setEditingUser(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Invite modal */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
