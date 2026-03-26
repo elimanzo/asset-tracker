@@ -1,41 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { createClient } from '@/lib/supabase/client'
 import type { AuditLog } from '@/lib/types'
 import { useAuth } from '@/providers/AuthProvider'
-
-export function useRecentActivity(limit = 10): { data: AuditLog[]; isLoading: boolean } {
-  const { user } = useAuth()
-  const [data, setData] = useState<AuditLog[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    if (!user?.orgId) return
-
-    let cancelled = false
-
-    createClient()
-      .from('audit_logs')
-      .select('*')
-      .eq('org_id', user.orgId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-      .then(({ data: rows }: { data: Record<string, unknown>[] | null }) => {
-        if (cancelled || !rows) return
-        setData(rows.map(mapLog))
-        setIsLoading(false)
-      })
-      .catch(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [user?.orgId, limit])
-
-  return { data, isLoading }
-}
 
 function mapLog(r: Record<string, unknown>): AuditLog {
   return {
@@ -52,42 +19,47 @@ function mapLog(r: Record<string, unknown>): AuditLog {
   }
 }
 
+export function useRecentActivity(limit = 10): { data: AuditLog[]; isLoading: boolean } {
+  const { user } = useAuth()
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['recentActivity', user?.orgId, limit],
+    enabled: !!user?.orgId,
+    queryFn: async () => {
+      const { data: rows } = await createClient()
+        .from('audit_logs')
+        .select('*')
+        .eq('org_id', user!.orgId!)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      return (rows ?? []).map(mapLog)
+    },
+    staleTime: 30_000,
+  })
+
+  return { data, isLoading }
+}
+
 export function useAssetHistory(assetId: string): {
   data: AuditLog[]
   isLoading: boolean
-  refresh: () => void
 } {
   const { user } = useAuth()
-  const [data, setData] = useState<AuditLog[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
-    if (!user?.orgId || !assetId) return
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['assetHistory', assetId],
+    enabled: !!user?.orgId && !!assetId,
+    queryFn: async () => {
+      const { data: rows } = await createClient()
+        .from('audit_logs')
+        .select('*')
+        .eq('org_id', user!.orgId!)
+        .eq('entity_id', assetId)
+        .order('created_at', { ascending: false })
+      return (rows ?? []).map(mapLog)
+    },
+    staleTime: 30_000,
+  })
 
-    let cancelled = false
-
-    createClient()
-      .from('audit_logs')
-      .select('*')
-      .eq('org_id', user.orgId)
-      .eq('entity_id', assetId)
-      .order('created_at', { ascending: false })
-      .then(({ data: rows }: { data: Record<string, unknown>[] | null }) => {
-        if (cancelled || !rows) return
-        setData(rows.map(mapLog))
-        setIsLoading(false)
-      })
-      .catch(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [user?.orgId, assetId, refreshKey])
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
-
-  return { data, isLoading, refresh }
+  return { data, isLoading }
 }

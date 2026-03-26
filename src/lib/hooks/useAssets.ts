@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 import { getAssetCount } from '@/app/actions/assets'
 import { createClient } from '@/lib/supabase/client'
@@ -124,18 +125,25 @@ export type PaginatedAssets = {
 
 export function useAssets(filters: AssetFilters = {}, page = 1, pageSize = 25): PaginatedAssets {
   const { user } = useAuth()
-  const [data, setData] = useState<AssetWithRelations[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (!user?.orgId) return
+  const queryKey = [
+    'assets',
+    user?.orgId,
+    user?.role,
+    JSON.stringify(user?.departmentIds),
+    filters.search,
+    filters.status,
+    filters.departmentId,
+    filters.categoryId,
+    page,
+    pageSize,
+  ]
 
-    let cancelled = false
-
-    async function fetchAssets() {
-      setIsLoading(true)
+  const { data, isLoading } = useQuery({
+    queryKey,
+    enabled: !!user?.orgId,
+    queryFn: async () => {
       const supabase = createClient()
 
       let query = supabase
@@ -150,33 +158,18 @@ export function useAssets(filters: AssetFilters = {}, page = 1, pageSize = 25): 
           p_org_id: user!.orgId!,
           p_search: filters.search,
         })
-        if (!ids || ids.length === 0) {
-          if (!cancelled) {
-            setData([])
-            setTotalCount(0)
-            setIsLoading(false)
-          }
-          return
-        }
+        if (!ids || ids.length === 0) return { rows: [], count: 0 }
         query = query.in('id', ids as string[])
       }
 
-      if (filters.status) {
-        query = query.eq('status', filters.status)
-      }
-      if (filters.departmentId) {
-        query = query.eq('department_id', filters.departmentId)
-      }
-      if (filters.categoryId) {
-        query = query.eq('category_id', filters.categoryId)
-      }
+      if (filters.status) query = query.eq('status', filters.status)
+      if (filters.departmentId) query = query.eq('department_id', filters.departmentId)
+      if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
 
-      // Scope editors/viewers to their assigned departments
       if (!canManage(user!.role)) {
         if (user!.departmentIds.length > 0) {
           query = query.in('department_id', user!.departmentIds)
         } else {
-          // No departments assigned — show nothing
           query = query.eq('department_id', '00000000-0000-0000-0000-000000000000')
         }
       }
@@ -185,40 +178,23 @@ export function useAssets(filters: AssetFilters = {}, page = 1, pageSize = 25): 
       const to = from + pageSize - 1
       const { data: rows, count, error } = await query.range(from, to)
 
-      if (cancelled || error || !rows) {
-        if (!cancelled) setIsLoading(false)
-        return
-      }
+      if (error || !rows) return { rows: [], count: 0 }
+      return { rows, count: count ?? 0 }
+    },
+    staleTime: 30_000,
+  })
 
-      setData(rows.map(mapAssetRow))
-      setTotalCount(count ?? 0)
-      setIsLoading(false)
-    }
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['assets'] }),
+    [queryClient]
+  )
 
-    fetchAssets().catch(() => {
-      if (!cancelled) setIsLoading(false)
-    })
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    user?.orgId,
-    user?.role,
-    JSON.stringify(user?.departmentIds),
-    filters.search,
-    filters.status,
-    filters.departmentId,
-    filters.categoryId,
-    page,
-    pageSize,
-    refreshKey,
-  ])
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
-
-  return { data, totalCount, isLoading, refresh }
+  return {
+    data: (data?.rows ?? []).map(mapAssetRow),
+    totalCount: data?.count ?? 0,
+    isLoading,
+    refresh,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -231,17 +207,12 @@ export function useAsset(id: string): {
   refresh: () => void
 } {
   const { user } = useAuth()
-  const [data, setData] = useState<AssetWithRelations | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (!user?.id) return
-
-    let cancelled = false
-
-    async function fetchAsset() {
-      setIsLoading(true)
+  const { data, isLoading } = useQuery({
+    queryKey: ['asset', id],
+    enabled: !!user?.id && !!id,
+    queryFn: async () => {
       const supabase = createClient()
       const { data: row, error } = await supabase
         .from('assets')
@@ -250,28 +221,23 @@ export function useAsset(id: string): {
         .is('deleted_at', null)
         .maybeSingle()
 
-      if (cancelled) return
-      if (error || !row) {
-        setData(null)
-        setIsLoading(false)
-        return
-      }
-      setData(mapAssetRow(row))
-      setIsLoading(false)
-    }
+      if (error || !row) return null
+      return mapAssetRow(row)
+    },
+    staleTime: 30_000,
+  })
 
-    fetchAsset().catch(() => {
-      if (!cancelled) setIsLoading(false)
-    })
+  // Invalidate the asset, its history, recent activity, and dashboard stats
+  const refresh = useCallback(() => {
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['asset', id] }),
+      queryClient.invalidateQueries({ queryKey: ['assetHistory', id] }),
+      queryClient.invalidateQueries({ queryKey: ['recentActivity'] }),
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] }),
+    ])
+  }, [queryClient, id])
 
-    return () => {
-      cancelled = true
-    }
-  }, [id, user?.id, refreshKey])
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
-
-  return { data, isLoading, refresh }
+  return { data: data ?? null, isLoading, refresh }
 }
 
 // ---------------------------------------------------------------------------
@@ -279,13 +245,14 @@ export function useAsset(id: string): {
 // ---------------------------------------------------------------------------
 
 export function useNextAssetTag(): string {
-  const [tag, setTag] = useState('AST-00001')
-
-  useEffect(() => {
-    getAssetCount().then((count) => {
-      setTag(generateAssetTag(count + 1))
-    })
-  }, [])
+  const { data: tag = 'AST-00001' } = useQuery({
+    queryKey: ['nextAssetTag'],
+    queryFn: async () => {
+      const count = await getAssetCount()
+      return generateAssetTag(count + 1)
+    },
+    staleTime: 0, // Always fresh — tag must not be stale
+  })
 
   return tag
 }
