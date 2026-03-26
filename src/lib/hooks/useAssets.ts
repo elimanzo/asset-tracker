@@ -53,7 +53,6 @@ function mapAssetRow(row: any): AssetWithRelations {
     vendorId: (row.vendor_id as string | null) ?? null,
     vendorName: (row.vendors as { name: string } | null)?.name ?? null,
     notes: (row.notes as string | null) ?? null,
-    imageUrl: (row.image_url as string | null) ?? null,
     deletedAt: (row.deleted_at as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -78,7 +77,7 @@ function mapAssetRow(row: any): AssetWithRelations {
 
 const ASSET_SELECT = `
   id, org_id, asset_tag, name, category_id, department_id, location_id, status,
-  purchase_date, purchase_cost, warranty_expiry, vendor_id, notes, image_url,
+  purchase_date, purchase_cost, warranty_expiry, vendor_id, notes,
   deleted_at, created_by, updated_by, created_at, updated_at,
   departments(name),
   categories(name),

@@ -44,7 +44,6 @@ export const AssetSchema = z.object({
   warrantyExpiry: z.string().nullable(), // ISO date string YYYY-MM-DD
   vendorId: z.string().uuid().nullable(),
   notes: z.string().max(2000).nullable(),
-  imageUrl: z.string().url().nullable(),
   deletedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -101,7 +100,6 @@ export const AssetFormSchema = z.object({
   warrantyExpiry: z.string().nullable(),
   vendorId: z.string().min(1).nullable(),
   notes: z.string().max(2000).optional(),
-  imageUrl: z.string().url().nullable().optional(),
 })
 
 export type AssetFormInput = z.infer<typeof AssetFormSchema>

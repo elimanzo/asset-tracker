@@ -43,7 +43,6 @@ export async function createAsset(
       warranty_expiry: input.warrantyExpiry,
       vendor_id: input.vendorId,
       notes: input.notes || null,
-      image_url: input.imageUrl || null,
       created_by: ctx.userId,
       updated_by: ctx.userId,
     })
@@ -78,7 +77,6 @@ export async function updateAsset(
       warranty_expiry: input.warrantyExpiry,
       vendor_id: input.vendorId,
       notes: input.notes || null,
-      image_url: input.imageUrl || null,
       updated_by: ctx.userId,
     })
     .eq('id', id)

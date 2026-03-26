@@ -59,7 +59,6 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
       warrantyExpiry: asset?.warrantyExpiry ?? null,
       vendorId: asset?.vendorId ?? null,
       notes: asset?.notes ?? '',
-      imageUrl: asset?.imageUrl ?? null,
     },
   })
 
