@@ -69,6 +69,24 @@ export async function sendInviteAction(
   const { error: authError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo })
 
   if (authError) {
+    // If the user already exists in auth (previously removed), send a magic link instead
+    const isExisting =
+      authError.message.toLowerCase().includes('already') ||
+      authError.message.toLowerCase().includes('registered')
+
+    if (isExisting) {
+      const { error: linkError } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo },
+      })
+      if (linkError) {
+        await admin.from('invites').delete().eq('email', email).eq('org_id', profile.org_id)
+        return { error: linkError.message }
+      }
+      return { error: null }
+    }
+
     // Roll back the invite row so the user can try again
     await admin.from('invites').delete().eq('email', email).eq('org_id', profile.org_id)
     return { error: authError.message }
