@@ -49,16 +49,23 @@ export async function updateOrganization(
 
   const admin = createAdminClient()
 
-  const { data: profile } = await admin.from('profiles').select('org_id').eq('id', user.id).single()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single()
 
   if (!profile?.org_id) return { error: 'No organisation found' }
 
+  const isOwner = profile.role === 'owner'
+
   const patch: Record<string, unknown> = {}
-  if (input.name !== undefined) patch.name = input.name
-  if (input.slug !== undefined) patch.slug = input.slug
+  if (isOwner && input.name !== undefined) patch.name = input.name
+  if (isOwner && input.slug !== undefined) patch.slug = input.slug
   if (input.departmentLabel !== undefined) patch.department_label = input.departmentLabel
   if (input.dashboardConfig !== undefined) patch.dashboard_config = input.dashboardConfig
   if (input.assetTableConfig !== undefined) patch.asset_table_config = input.assetTableConfig
+  if (input.reportConfig !== undefined) patch.report_config = input.reportConfig
 
   const { error } = await admin.from('organizations').update(patch).eq('id', profile.org_id)
 

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/providers/AuthProvider'
 import { useOrg } from '@/providers/OrgProvider'
 
 const OrgFormSchema = z.object({
@@ -50,6 +51,16 @@ const OrgFormSchema = z.object({
   showColPurchaseCost: z.boolean(),
   showColWarrantyExpiry: z.boolean(),
   showColVendor: z.boolean(),
+  // Report columns
+  showRptAssignedTo: z.boolean(),
+  showRptDepartment: z.boolean(),
+  showRptCategory: z.boolean(),
+  showRptLocation: z.boolean(),
+  showRptStatus: z.boolean(),
+  showRptPurchaseDate: z.boolean(),
+  showRptPurchaseCost: z.boolean(),
+  showRptWarrantyExpiry: z.boolean(),
+  showRptVendor: z.boolean(),
 })
 type OrgFormInput = z.infer<typeof OrgFormSchema>
 
@@ -86,8 +97,11 @@ function ToggleRow({
 
 export default function OrgSettingsPage() {
   const { org, setOrg } = useOrg()
+  const { user } = useAuth()
+  const isOwner = user?.role === 'owner'
   const dc = org?.dashboardConfig ?? {}
   const tc = org?.assetTableConfig ?? {}
+  const rc = org?.reportConfig ?? {}
 
   const form = useForm<OrgFormInput>({
     resolver: zodResolver(OrgFormSchema),
@@ -112,6 +126,15 @@ export default function OrgSettingsPage() {
       showColPurchaseCost: false,
       showColWarrantyExpiry: false,
       showColVendor: false,
+      showRptAssignedTo: true,
+      showRptDepartment: true,
+      showRptCategory: true,
+      showRptLocation: false,
+      showRptStatus: true,
+      showRptPurchaseDate: false,
+      showRptPurchaseCost: false,
+      showRptWarrantyExpiry: false,
+      showRptVendor: false,
     },
   })
 
@@ -138,6 +161,15 @@ export default function OrgSettingsPage() {
         showColPurchaseCost: tc.showPurchaseCost ?? false,
         showColWarrantyExpiry: tc.showWarrantyExpiry ?? false,
         showColVendor: tc.showVendor ?? false,
+        showRptAssignedTo: rc.showAssignedTo ?? true,
+        showRptDepartment: rc.showDepartment ?? true,
+        showRptCategory: rc.showCategory ?? true,
+        showRptLocation: rc.showLocation ?? false,
+        showRptStatus: rc.showStatus ?? true,
+        showRptPurchaseDate: rc.showPurchaseDate ?? false,
+        showRptPurchaseCost: rc.showPurchaseCost ?? false,
+        showRptWarrantyExpiry: rc.showWarrantyExpiry ?? false,
+        showRptVendor: rc.showVendor ?? false,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,12 +197,24 @@ export default function OrgSettingsPage() {
       showWarrantyExpiry: data.showColWarrantyExpiry,
       showVendor: data.showColVendor,
     }
+    const reportConfig = {
+      showAssignedTo: data.showRptAssignedTo,
+      showDepartment: data.showRptDepartment,
+      showCategory: data.showRptCategory,
+      showLocation: data.showRptLocation,
+      showStatus: data.showRptStatus,
+      showPurchaseDate: data.showRptPurchaseDate,
+      showPurchaseCost: data.showRptPurchaseCost,
+      showWarrantyExpiry: data.showRptWarrantyExpiry,
+      showVendor: data.showRptVendor,
+    }
     const result = await updateOrganization({
       name: data.name,
       slug: data.slug,
       departmentLabel: data.departmentLabel,
       dashboardConfig,
       assetTableConfig,
+      reportConfig,
     })
     if (result.error) {
       toast.error(result.error)
@@ -184,6 +228,7 @@ export default function OrgSettingsPage() {
         departmentLabel: data.departmentLabel,
         dashboardConfig,
         assetTableConfig,
+        reportConfig,
       })
     toast.success('Organisation settings saved')
   }
@@ -198,7 +243,11 @@ export default function OrgSettingsPage() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Organisation</CardTitle>
-              <CardDescription>Update your organisation name and URL slug.</CardDescription>
+              <CardDescription>
+                {isOwner
+                  ? 'Update your organisation name and URL slug.'
+                  : 'Only the organisation owner can change the name and URL slug.'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -208,7 +257,7 @@ export default function OrgSettingsPage() {
                   <FormItem className="max-w-md">
                     <FormLabel>Organisation name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={!isOwner} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -221,7 +270,7 @@ export default function OrgSettingsPage() {
                   <FormItem className="max-w-md">
                     <FormLabel>URL slug</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={!isOwner} />
                     </FormControl>
                     <FormDescription className="text-xs">
                       Lowercase letters, numbers, and hyphens only.
@@ -323,11 +372,56 @@ export default function OrgSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Report columns */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Reports — columns</CardTitle>
+              <CardDescription>
+                Choose which columns are included in report previews and CSV exports.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ToggleRow control={form.control} name="showRptAssignedTo" label="Assigned to" />
+              <ToggleRow control={form.control} name="showRptDepartment" label={deptLabel} />
+              <ToggleRow control={form.control} name="showRptCategory" label="Category" />
+              <ToggleRow control={form.control} name="showRptLocation" label="Location" />
+              <ToggleRow control={form.control} name="showRptStatus" label="Status" />
+              <ToggleRow control={form.control} name="showRptPurchaseDate" label="Purchase date" />
+              <ToggleRow control={form.control} name="showRptPurchaseCost" label="Purchase cost" />
+              <ToggleRow
+                control={form.control}
+                name="showRptWarrantyExpiry"
+                label="Warranty expiry"
+              />
+              <ToggleRow control={form.control} name="showRptVendor" label="Vendor" />
+            </CardContent>
+          </Card>
+
           <Button type="submit" disabled={form.formState.isSubmitting}>
             Save changes
           </Button>
         </form>
       </Form>
+
+      {form.formState.isDirty && (
+        <div className="bg-card fixed right-0 bottom-0 left-0 z-50 border-t p-4 shadow-lg lg:left-60">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-muted-foreground text-sm">You have unsaved changes</p>
+            <div className="flex gap-2">
+              <Button variant="outline" type="button" onClick={() => form.reset()}>
+                Discard
+              </Button>
+              <Button
+                type="button"
+                disabled={form.formState.isSubmitting}
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                Save changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -19,7 +19,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <h1 className="text-foreground text-2xl font-bold tracking-tight">Settings</h1>
       </div>
       <div className="flex flex-col gap-6 md:flex-row">
-        <nav className="flex shrink-0 flex-row gap-1 md:w-44 md:flex-col">
+        <nav className="flex shrink-0 flex-row gap-1 md:sticky md:top-0 md:w-44 md:flex-col md:self-start">
           {SETTINGS_NAV.map((item) => (
             <Link
               key={item.href}

@@ -54,6 +54,16 @@ export function formatCompactNumber(value: number): string {
   return new Intl.NumberFormat('en-US', { notation: 'compact' }).format(value)
 }
 
+/** Format currency compactly for stat cards (12345 → "$12.3K") */
+export function formatCompactCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 /** Get user initials for avatar fallback */
 export function getInitials(name: string): string {
   return name

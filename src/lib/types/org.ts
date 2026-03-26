@@ -31,6 +31,20 @@ export const AssetTableConfigSchema = z.object({
 
 export type AssetTableConfig = z.infer<typeof AssetTableConfigSchema>
 
+export const ReportConfigSchema = z.object({
+  showAssignedTo: z.boolean().optional(),
+  showDepartment: z.boolean().optional(),
+  showCategory: z.boolean().optional(),
+  showLocation: z.boolean().optional(),
+  showStatus: z.boolean().optional(),
+  showPurchaseDate: z.boolean().optional(),
+  showPurchaseCost: z.boolean().optional(),
+  showWarrantyExpiry: z.boolean().optional(),
+  showVendor: z.boolean().optional(),
+})
+
+export type ReportConfig = z.infer<typeof ReportConfigSchema>
+
 export type DashboardConfig = z.infer<typeof DashboardConfigSchema>
 
 export const OrganizationSchema = z.object({
@@ -47,6 +61,7 @@ export const OrganizationSchema = z.object({
   departmentLabel: z.string().min(1).max(50),
   dashboardConfig: DashboardConfigSchema,
   assetTableConfig: AssetTableConfigSchema,
+  reportConfig: ReportConfigSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
@@ -72,6 +87,7 @@ export const UpdateOrganizationSchema = CreateOrganizationSchema.extend({
   departmentLabel: z.string().min(1, 'Label is required').max(50),
   dashboardConfig: DashboardConfigSchema,
   assetTableConfig: AssetTableConfigSchema,
+  reportConfig: ReportConfigSchema,
 }).partial()
 
 export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationSchema>

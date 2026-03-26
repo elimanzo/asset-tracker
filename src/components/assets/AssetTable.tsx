@@ -54,8 +54,10 @@ export function AssetTable({ assets }: AssetTableProps) {
   const showCategory = tc.showCategory ?? true
   const showLocation = tc.showLocation ?? true
   const showStatus = tc.showStatus ?? true
+  const showPurchaseDate = tc.showPurchaseDate ?? false
   const showPurchaseCost = tc.showPurchaseCost ?? false
   const showWarrantyExpiry = tc.showWarrantyExpiry ?? false
+  const showVendor = tc.showVendor ?? false
 
   const canEditAssets = user ? canEdit(user.role) : false
 
@@ -141,6 +143,15 @@ export function AssetTable({ assets }: AssetTableProps) {
         <span className="text-muted-foreground text-sm">{row.getValue('locationName') ?? '—'}</span>
       ),
     },
+    showPurchaseDate && {
+      accessorKey: 'purchaseDate',
+      header: 'Purchase date',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">
+          {formatDate(row.original.purchaseDate)}
+        </span>
+      ),
+    },
     showPurchaseCost && {
       accessorKey: 'purchaseCost',
       header: ({ column }) => (
@@ -172,6 +183,13 @@ export function AssetTable({ assets }: AssetTableProps) {
           <span className="text-muted-foreground text-sm">{expiry ? formatDate(expiry) : '—'}</span>
         )
       },
+    },
+    showVendor && {
+      accessorKey: 'vendorName',
+      header: 'Vendor',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">{row.original.vendorName ?? '—'}</span>
+      ),
     },
     {
       id: 'actions',
