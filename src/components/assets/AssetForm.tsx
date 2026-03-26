@@ -5,13 +5,8 @@ import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 
 import { createAsset, getNextTagForPrefix, getTagPrefixes, updateAsset } from '@/app/actions/assets'
-import { createCategory } from '@/app/actions/categories'
-import { createDepartment } from '@/app/actions/departments'
-import { createLocation } from '@/app/actions/locations'
-import { createVendor } from '@/app/actions/vendors'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -45,6 +40,7 @@ import { useLocations } from '@/lib/hooks/useLocations'
 import { useVendors } from '@/lib/hooks/useVendors'
 import { ASSET_STATUSES, AssetFormSchema, type AssetFormInput } from '@/lib/types'
 import type { AssetWithRelations } from '@/lib/types'
+import { useOrgData } from '@/providers/OrgDataProvider'
 import { useOrg } from '@/providers/OrgProvider'
 
 // ---------------------------------------------------------------------------
@@ -117,6 +113,7 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
   const router = useRouter()
   const { data: departments } = useDepartments()
   const { org } = useOrg()
+  const orgData = useOrgData()
   const deptLabel = org?.departmentLabel ?? 'Department'
   const { data: categories } = useCategories()
   const { data: locations } = useLocations()
@@ -633,22 +630,17 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
         </div>
       </form>
 
-      {/* Quick-add dialogs */}
-      {/* The server action inserts the record; OrgDataProvider's realtime subscription
-          will pick it up and refresh the list automatically. We just set the form value
-          immediately using the returned ID. */}
+      {/* Quick-add dialogs — use orgData handlers which call server action,
+          await refetch(), then return the new ID so the list is fresh before
+          we set the form value. */}
       <QuickAddDialog
         open={quickAdd === 'department'}
         onOpenChange={(open) => !open && setQuickAdd(null)}
         title={`Add ${deptLabel}`}
         onAdd={async (name) => {
-          const result = await createDepartment({ name })
-          if ('error' in result) {
-            toast.error(result.error)
-            return null
-          }
-          form.setValue('departmentId', result.id)
-          return result.id
+          const id = await orgData.createDepartment({ name })
+          if (id) form.setValue('departmentId', id)
+          return id
         }}
       />
       <QuickAddDialog
@@ -656,13 +648,9 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
         onOpenChange={(open) => !open && setQuickAdd(null)}
         title="Add category"
         onAdd={async (name) => {
-          const result = await createCategory({ name })
-          if ('error' in result) {
-            toast.error(result.error)
-            return null
-          }
-          form.setValue('categoryId', result.id)
-          return result.id
+          const id = await orgData.createCategory({ name })
+          if (id) form.setValue('categoryId', id)
+          return id
         }}
       />
       <QuickAddDialog
@@ -670,13 +658,9 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
         onOpenChange={(open) => !open && setQuickAdd(null)}
         title="Add location"
         onAdd={async (name) => {
-          const result = await createLocation({ name })
-          if ('error' in result) {
-            toast.error(result.error)
-            return null
-          }
-          form.setValue('locationId', result.id)
-          return result.id
+          const id = await orgData.createLocation({ name })
+          if (id) form.setValue('locationId', id)
+          return id
         }}
       />
       <QuickAddDialog
@@ -684,13 +668,9 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
         onOpenChange={(open) => !open && setQuickAdd(null)}
         title="Add vendor"
         onAdd={async (name) => {
-          const result = await createVendor({ name })
-          if ('error' in result) {
-            toast.error(result.error)
-            return null
-          }
-          form.setValue('vendorId', result.id)
-          return result.id
+          const id = await orgData.createVendor({ name })
+          if (id) form.setValue('vendorId', id)
+          return id
         }}
       />
     </Form>
