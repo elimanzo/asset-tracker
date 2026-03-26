@@ -211,6 +211,39 @@ export function OrgDataProvider({ children }: { children: React.ReactNode }) {
     void refetch()
   }, [orgId, refetch])
 
+  // Real-time: re-fetch whenever any org table changes (own mutations,
+  // other sessions, or direct DB edits in the Supabase dashboard)
+  useEffect(() => {
+    if (!orgId) return
+
+    const supabase = createClient()
+    const filter = (table: string) => ({
+      event: '*' as const,
+      schema: 'public',
+      table,
+      filter: `org_id=eq.${orgId}`,
+    })
+
+    const channel = supabase
+      .channel(`org-data-${orgId}`)
+      .on('postgres_changes', filter('departments'), () => void refetch())
+      .on('postgres_changes', filter('categories'), () => void refetch())
+      .on('postgres_changes', filter('locations'), () => void refetch())
+      .on('postgres_changes', filter('vendors'), () => void refetch())
+      .on('postgres_changes', filter('profiles'), () => void refetch())
+      .on('postgres_changes', filter('invites'), () => void refetch())
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_departments' },
+        () => void refetch()
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [orgId, refetch])
+
   // -------------------------------------------------------------------------
   // Departments
   // -------------------------------------------------------------------------
