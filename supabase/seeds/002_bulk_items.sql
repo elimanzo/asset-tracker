@@ -56,7 +56,7 @@ begin
 
   select id, full_name into v_user_id, v_user_name
     from public.profiles
-    where org_id = v_org_id
+    where org_id = v_org_id and role = 'owner'
     limit 1;
 
   -- resolve existing departments and locations by name
