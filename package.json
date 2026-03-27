@@ -10,7 +10,12 @@
     "lint:fix": "eslint --fix",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:studio": "open http://127.0.0.1:54323",
+    "db:email": "open http://127.0.0.1:54324"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

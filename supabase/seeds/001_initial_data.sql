@@ -64,7 +64,7 @@ begin
   delete from public.vendors         where org_id = v_org_id;
   delete from public.invites         where org_id = v_org_id;
   delete from public.user_departments
-    where profile_id in (u_owner, u_admin, u_editor, u_viewer);
+    where user_id in (u_owner, u_admin, u_editor, u_viewer);
   delete from public.profiles        where id in (u_owner, u_admin, u_editor, u_viewer);
   delete from public.organizations   where id = v_org_id;
   delete from auth.users             where id in (u_owner, u_admin, u_editor, u_viewer);
@@ -127,12 +127,12 @@ begin
     (d_mktg,    v_org_id, 'Marketing',       'Brand, campaigns, content, and growth');
 
   -- Editor → IT + Operations
-  insert into public.user_departments (profile_id, department_id) values
+  insert into public.user_departments (user_id, department_id) values
     (u_editor, d_it),
     (u_editor, d_ops);
 
   -- Viewer → Finance + Human Resources
-  insert into public.user_departments (profile_id, department_id) values
+  insert into public.user_departments (user_id, department_id) values
     (u_viewer, d_finance),
     (u_viewer, d_hr);
 
