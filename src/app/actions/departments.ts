@@ -1,6 +1,6 @@
 'use server'
 
-import type { DepartmentFormInput } from '@/lib/types'
+import { DepartmentFormSchema, type DepartmentFormInput } from '@/lib/types'
 
 import { logAudit } from './_audit'
 import { getContext } from './_context'
@@ -8,6 +8,9 @@ import { getContext } from './_context'
 export async function createDepartment(
   input: DepartmentFormInput
 ): Promise<{ id: string } | { error: string }> {
+  const parsed = DepartmentFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -33,6 +36,9 @@ export async function updateDepartment(
   id: string,
   input: DepartmentFormInput
 ): Promise<{ error: string } | null> {
+  const parsed = DepartmentFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 

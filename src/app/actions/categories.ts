@@ -1,6 +1,6 @@
 'use server'
 
-import type { CategoryFormInput } from '@/lib/types'
+import { CategoryFormSchema, type CategoryFormInput } from '@/lib/types'
 
 import { logAudit } from './_audit'
 import { getContext } from './_context'
@@ -8,6 +8,9 @@ import { getContext } from './_context'
 export async function createCategory(
   input: CategoryFormInput
 ): Promise<{ id: string } | { error: string }> {
+  const parsed = CategoryFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -38,6 +41,9 @@ export async function updateCategory(
   id: string,
   input: CategoryFormInput
 ): Promise<{ error: string } | null> {
+  const parsed = CategoryFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 

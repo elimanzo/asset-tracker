@@ -1,6 +1,6 @@
 'use server'
 
-import type { LocationFormInput } from '@/lib/types'
+import { LocationFormSchema, type LocationFormInput } from '@/lib/types'
 
 import { logAudit } from './_audit'
 import { getContext } from './_context'
@@ -8,6 +8,9 @@ import { getContext } from './_context'
 export async function createLocation(
   input: LocationFormInput
 ): Promise<{ id: string } | { error: string }> {
+  const parsed = LocationFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -33,6 +36,9 @@ export async function updateLocation(
   id: string,
   input: LocationFormInput
 ): Promise<{ error: string } | null> {
+  const parsed = LocationFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
