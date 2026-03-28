@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -44,12 +43,12 @@ beforeEach(() => {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-actor-0001' } } }),
     },
-  } as any)
+  } as unknown as Awaited<ReturnType<typeof createClient>>)
 
   vi.mocked(createAdminClient).mockReturnValue({
     from: vi.fn().mockReturnValue(chain),
     auth: { admin: { inviteUserByEmail: mockInviteUserByEmail } },
-  } as any)
+  } as unknown as ReturnType<typeof createAdminClient>)
 })
 
 // ---------------------------------------------------------------------------

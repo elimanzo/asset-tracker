@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -60,11 +59,11 @@ function setupAuthenticatedUser(userId = 'user-0001') {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }),
     },
-  } as any)
+  } as unknown as Awaited<ReturnType<typeof createClient>>)
   vi.mocked(createAdminClient).mockReturnValue({
     from: vi.fn().mockReturnValue(chain),
     auth: { admin: {} },
-  } as any)
+  } as unknown as ReturnType<typeof createAdminClient>)
   // getContext maybeSingle: org profile
   chain.maybeSingle.mockResolvedValueOnce({
     data: { org_id: 'org-0001', full_name: 'Test User' },
@@ -76,11 +75,11 @@ function setupUnauthenticated() {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
     },
-  } as any)
+  } as unknown as Awaited<ReturnType<typeof createClient>>)
   vi.mocked(createAdminClient).mockReturnValue({
     from: vi.fn().mockReturnValue(chain),
     auth: { admin: {} },
-  } as any)
+  } as unknown as ReturnType<typeof createAdminClient>)
 }
 
 beforeEach(() => {
