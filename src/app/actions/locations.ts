@@ -14,6 +14,9 @@ export async function createLocation(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { data, error } = await ctx.admin
     .from('locations')
     .insert({ org_id: ctx.orgId, name: input.name, description: input.description ?? null })
@@ -42,6 +45,9 @@ export async function updateLocation(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { error } = await ctx.admin
     .from('locations')
     .update({ name: input.name, description: input.description ?? null })
@@ -63,6 +69,9 @@ export async function updateLocation(
 export async function deleteLocation(id: string): Promise<{ error: string } | null> {
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { data: loc } = await ctx.admin.from('locations').select('name').eq('id', id).maybeSingle()
 

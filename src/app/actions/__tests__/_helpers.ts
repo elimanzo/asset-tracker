@@ -1,6 +1,10 @@
 import { vi } from 'vitest'
 
-import type { ActionClients } from '../_context'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type { UserRole } from '@/lib/types'
+import { canEdit, canManage } from '@/lib/utils/permissions'
+
+import type { ActionClients, ActionContext } from '../_context'
 
 // ---------------------------------------------------------------------------
 // Chainable Supabase query builder stub
@@ -49,7 +53,7 @@ export function makeClients(
     } as unknown as NonNullable<ActionClients['supabase']>,
     admin: {
       from: vi.fn().mockReturnValue(chain),
-      auth: { admin: { inviteUserByEmail } },
+      auth: { admin: { inviteUserByEmail, deleteUser: vi.fn().mockResolvedValue({}) } },
     } as unknown as NonNullable<ActionClients['admin']>,
   }
 }
@@ -65,5 +69,27 @@ export function makeUnauthenticatedClients(chain: ReturnType<typeof makeChain>):
       from: vi.fn().mockReturnValue(chain),
       auth: { admin: {} },
     } as unknown as NonNullable<ActionClients['admin']>,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ActionContext factory — for unit-testing permission logic without going
+// through the full getContext() path
+// ---------------------------------------------------------------------------
+
+export function makeContext(overrides: Partial<ActionContext> = {}): ActionContext {
+  const role: UserRole = overrides.role ?? 'admin'
+  return {
+    userId: 'user-actor-0001',
+    orgId: 'org-0001',
+    actorName: 'Test Actor',
+    role,
+    departmentIds: [],
+    admin: {} as unknown as ReturnType<typeof createAdminClient>,
+    requireRole(level: 'editor' | 'admin') {
+      const allowed = level === 'admin' ? canManage(role) : canEdit(role)
+      return allowed ? null : { error: 'Not authorised' }
+    },
+    ...overrides,
   }
 }

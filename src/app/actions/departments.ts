@@ -14,6 +14,9 @@ export async function createDepartment(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { data, error } = await ctx.admin
     .from('departments')
     .insert({ org_id: ctx.orgId, name: input.name, description: input.description ?? null })
@@ -41,6 +44,9 @@ export async function updateDepartment(
 
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { error } = await ctx.admin
     .from('departments')
@@ -77,6 +83,9 @@ export async function countAssetsInDepartment(id: string): Promise<number> {
 export async function deleteDepartment(id: string): Promise<{ error: string } | null> {
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { data: dept } = await ctx.admin
     .from('departments')

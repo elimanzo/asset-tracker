@@ -1,7 +1,6 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -9,74 +8,45 @@ import type { UserRole } from '@/lib/types'
 
 import { logAudit } from './_audit'
 import type { ActionClients } from './_context'
-
-async function getActorProfile(clients?: ActionClients) {
-  const supabase = clients?.supabase ?? (await createClient())
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const admin = clients?.admin ?? createAdminClient()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('org_id, role, full_name')
-    .eq('id', user.id)
-    .single()
-
-  return { actorId: user.id, profile, admin }
-}
+import { getContext } from './_context'
 
 export async function updateUserRoleAction(
   userId: string,
   role: Exclude<UserRole, 'owner'>,
   clients?: ActionClients
 ): Promise<{ error: string } | { error: null }> {
-  const { actorId, profile, admin } = await getActorProfile(clients)
+  const ctx = await getContext(clients)
+  if (!ctx) return { error: 'No organisation found' }
 
-  if (!profile?.org_id) return { error: 'No organisation found' }
-  if (!['owner', 'admin'].includes(profile.role)) return { error: 'Not authorised' }
-  if (userId === actorId) return { error: 'You cannot change your own role' }
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
-  // Prevent changing the org owner's role
-  const { data: target } = await admin
+  if (userId === ctx.userId) return { error: 'You cannot change your own role' }
+
+  const { data: target } = await ctx.admin
     .from('profiles')
-    .select('role')
+    .select('role, full_name')
     .eq('id', userId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
     .single()
 
   if (!target) return { error: 'User not found' }
   if (target.role === 'owner') return { error: "Cannot change the owner's role" }
 
-  const { error } = await admin
+  const { error } = await ctx.admin
     .from('profiles')
     .update({ role })
     .eq('id', userId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
 
   if (!error) {
-    const { data: targetProfile } = await admin
-      .from('profiles')
-      .select('full_name')
-      .eq('id', userId)
-      .maybeSingle()
-
-    await logAudit(
-      {
-        userId: actorId,
-        orgId: profile.org_id as string,
-        actorName: (profile.full_name as string) ?? 'Unknown',
-        admin,
-      },
-      {
-        entityType: 'user',
-        entityId: userId,
-        entityName: (targetProfile?.full_name as string) ?? 'Unknown user',
-        action: 'role_changed',
-        changes: { role: { old: target.role, new: role } },
-      }
-    )
+    await logAudit(ctx, {
+      entityType: 'user',
+      entityId: userId,
+      entityName: (target.full_name as string) ?? 'Unknown user',
+      action: 'role_changed',
+      changes: { role: { old: target.role, new: role } },
+    })
   }
 
   return { error: error?.message ?? null }
@@ -87,18 +57,22 @@ export async function updateUserDepartmentsAction(
   departmentIds: string[],
   clients?: ActionClients
 ): Promise<{ error: string } | { error: null }> {
-  const { profile, admin } = await getActorProfile(clients)
+  const ctx = await getContext(clients)
+  if (!ctx) return { error: 'No organisation found' }
 
-  if (!profile?.org_id) return { error: 'No organisation found' }
-  if (!['owner', 'admin'].includes(profile.role)) return { error: 'Not authorised' }
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   // Replace all department memberships in a transaction-like manner
-  const { error: deleteError } = await admin.from('user_departments').delete().eq('user_id', userId)
+  const { error: deleteError } = await ctx.admin
+    .from('user_departments')
+    .delete()
+    .eq('user_id', userId)
 
   if (deleteError) return { error: deleteError.message }
 
   if (departmentIds.length > 0) {
-    const { error: insertError } = await admin
+    const { error: insertError } = await ctx.admin
       .from('user_departments')
       .insert(departmentIds.map((department_id) => ({ user_id: userId, department_id })))
     if (insertError) return { error: insertError.message }
@@ -111,24 +85,25 @@ export async function revokeInviteAction(
   inviteId: string,
   clients?: ActionClients
 ): Promise<{ error: string } | { error: null }> {
-  const { profile, admin } = await getActorProfile(clients)
+  const ctx = await getContext(clients)
+  if (!ctx) return { error: 'No organisation found' }
 
-  if (!profile?.org_id) return { error: 'No organisation found' }
-  if (!['owner', 'admin'].includes(profile.role)) return { error: 'Not authorised' }
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   // Grab the email before deleting so we can clean up the auth user
-  const { data: invite } = await admin
+  const { data: invite } = await ctx.admin
     .from('invites')
     .select('email')
     .eq('id', inviteId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
     .maybeSingle()
 
-  const { error } = await admin
+  const { error } = await ctx.admin
     .from('invites')
     .delete()
     .eq('id', inviteId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
 
   if (error) return { error: error.message }
 
@@ -138,7 +113,7 @@ export async function revokeInviteAction(
   // The on_auth_user_created trigger creates a profile with org_id = null for
   // pending users, so we can look up the user ID that way.
   if (invite?.email) {
-    const { data: pendingProfile } = await admin
+    const { data: pendingProfile } = await ctx.admin
       .from('profiles')
       .select('id')
       .eq('email', invite.email)
@@ -146,7 +121,7 @@ export async function revokeInviteAction(
       .maybeSingle()
 
     if (pendingProfile) {
-      await admin.auth.admin.deleteUser(pendingProfile.id as string)
+      await ctx.admin.auth.admin.deleteUser(pendingProfile.id as string)
       // profile row is removed automatically via ON DELETE CASCADE on auth.users
     }
   }
@@ -158,32 +133,34 @@ export async function removeUserAction(
   userId: string,
   clients?: ActionClients
 ): Promise<{ error: string } | { error: null }> {
-  const { actorId, profile, admin } = await getActorProfile(clients)
+  const ctx = await getContext(clients)
+  if (!ctx) return { error: 'No organisation found' }
 
-  if (!profile?.org_id) return { error: 'No organisation found' }
-  if (!['owner', 'admin'].includes(profile.role)) return { error: 'Not authorised' }
-  if (userId === actorId) return { error: 'You cannot remove yourself' }
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
-  const { data: target } = await admin
+  if (userId === ctx.userId) return { error: 'You cannot remove yourself' }
+
+  const { data: target } = await ctx.admin
     .from('profiles')
     .select('role')
     .eq('id', userId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
     .single()
 
   if (!target) return { error: 'User not found' }
   if (target.role === 'owner') return { error: 'Cannot remove the org owner' }
 
-  const { error } = await admin
+  const { error } = await ctx.admin
     .from('profiles')
     .update({ invite_status: 'deactivated' })
     .eq('id', userId)
-    .eq('org_id', profile.org_id)
+    .eq('org_id', ctx.orgId)
 
   if (error) return { error: error.message }
 
   // Delete the auth user so they can be re-invited cleanly later
-  await admin.auth.admin.deleteUser(userId)
+  await ctx.admin.auth.admin.deleteUser(userId)
 
   return { error: null }
 }
