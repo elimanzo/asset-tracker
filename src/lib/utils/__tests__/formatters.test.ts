@@ -7,7 +7,6 @@ import {
   formatDate,
   formatDateTime,
   formatRelativeTime,
-  generateAssetTag,
   getInitials,
   slugify,
 } from '@/lib/utils/formatters'
@@ -102,28 +101,6 @@ describe('formatRelativeTime', () => {
 
   it('returns a relative string ending with "ago" for a past date', () => {
     expect(formatRelativeTime('2020-01-01T00:00:00Z')).toMatch(/ago$/)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// generateAssetTag
-// ---------------------------------------------------------------------------
-
-describe('generateAssetTag', () => {
-  it('pads single digits to 5 places', () => {
-    expect(generateAssetTag(1)).toBe('AST-00001')
-  })
-
-  it('pads double digits', () => {
-    expect(generateAssetTag(42)).toBe('AST-00042')
-  })
-
-  it('handles exactly 5 digits', () => {
-    expect(generateAssetTag(99999)).toBe('AST-99999')
-  })
-
-  it('does not truncate beyond 5 digits', () => {
-    expect(generateAssetTag(100000)).toBe('AST-100000')
   })
 })
 

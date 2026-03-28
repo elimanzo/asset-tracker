@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 
-import { getAssetCount } from '@/app/actions/assets'
+import { getNextTagForPrefix } from '@/app/actions/assets'
+import { ASSET_TAG_PREFIX } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { AssetAssignment, AssetStatus, AssetWithRelations } from '@/lib/types'
-import { generateAssetTag } from '@/lib/utils/formatters'
 import { canManage } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -241,16 +241,13 @@ export function useAsset(id: string): {
 }
 
 // ---------------------------------------------------------------------------
-// useNextAssetTag — generates the next tag based on total asset count
+// useNextAssetTag — max-based suggestion for the default "AST" prefix
 // ---------------------------------------------------------------------------
 
 export function useNextAssetTag(): string {
-  const { data: tag = 'AST-00001' } = useQuery({
+  const { data: tag = 'AST-0001' } = useQuery({
     queryKey: ['nextAssetTag'],
-    queryFn: async () => {
-      const count = await getAssetCount()
-      return generateAssetTag(count + 1)
-    },
+    queryFn: () => getNextTagForPrefix(ASSET_TAG_PREFIX),
     staleTime: 0, // Always fresh — tag must not be stale
   })
 

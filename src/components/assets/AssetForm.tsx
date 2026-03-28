@@ -40,6 +40,7 @@ import { useLocationMutations, useLocations } from '@/lib/hooks/useLocations'
 import { useVendorMutations, useVendors } from '@/lib/hooks/useVendors'
 import { ASSET_STATUSES, AssetFormSchema, type AssetFormInput } from '@/lib/types'
 import type { AssetWithRelations } from '@/lib/types'
+import { parseTagParts } from '@/lib/utils/assetTag'
 import { useOrg } from '@/providers/OrgProvider'
 
 // ---------------------------------------------------------------------------
@@ -127,18 +128,10 @@ export function AssetForm({ asset, defaultAssetTag }: AssetFormProps) {
   // Prefix-based tag state (new assets only)
   // ---------------------------------------------------------------------------
 
-  // Split default tag into prefix + suffix (e.g. "AST-00001" → "AST", "00001")
-  const initialPrefix = (() => {
-    const tag = defaultAssetTag ?? 'AST-0001'
-    const idx = tag.lastIndexOf('-')
-    return idx > 0 ? tag.slice(0, idx) : 'AST'
-  })()
-
-  const initialSuffix = (() => {
-    const tag = defaultAssetTag ?? ''
-    const idx = tag.lastIndexOf('-')
-    return idx > 0 ? tag.slice(idx + 1) : '0001'
-  })()
+  // Split default tag into prefix + suffix (e.g. "AST-0001" → "AST", "0001")
+  const { prefix: initialPrefix, suffix: initialSuffix } = parseTagParts(
+    defaultAssetTag ?? 'AST-0001'
+  )
 
   const [prefix, setPrefix] = useState(initialPrefix)
   const [tagSuffix, setTagSuffix] = useState(initialSuffix)
