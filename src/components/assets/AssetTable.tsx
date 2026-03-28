@@ -37,8 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { AssetWithRelations } from '@/lib/types'
-import { computeAvailable } from '@/lib/utils/availability'
+import type { TypedAsset } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils/formatters'
 import { canEdit } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
@@ -47,7 +46,7 @@ import { useOrg } from '@/providers/OrgProvider'
 const LS_KEY = 'asset-table-cols'
 
 interface AssetTableProps {
-  assets: AssetWithRelations[]
+  assets: TypedAsset[]
 }
 
 export function AssetTable({ assets }: AssetTableProps) {
@@ -103,7 +102,7 @@ export function AssetTable({ assets }: AssetTableProps) {
     })
   }, [])
 
-  const allColumns: (ColumnDef<AssetWithRelations> | false)[] = [
+  const allColumns: (ColumnDef<TypedAsset> | false)[] = [
     {
       accessorKey: 'assetTag',
       header: ({ column }) => (
@@ -152,9 +151,7 @@ export function AssetTable({ assets }: AssetTableProps) {
       id: 'assignedTo',
       header: 'Assigned to',
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">
-          {row.original.currentAssignment?.assignedToName ?? '—'}
-        </span>
+        <span className="text-muted-foreground text-sm">{row.original.assigneeSummary ?? '—'}</span>
       ),
     },
     showCategory && {
@@ -179,10 +176,9 @@ export function AssetTable({ assets }: AssetTableProps) {
       cell: ({ row }) => {
         const asset = row.original
         if (asset.isBulk) {
-          const available = computeAvailable(asset.quantity ?? 0, asset.quantityCheckedOut)
           return (
             <Badge variant="secondary" className="text-xs">
-              {available}/{asset.quantity} avail.
+              {asset.available}/{asset.quantity} avail.
             </Badge>
           )
         }
@@ -280,7 +276,7 @@ export function AssetTable({ assets }: AssetTableProps) {
     },
   ]
 
-  const columns = allColumns.filter(Boolean) as ColumnDef<AssetWithRelations>[]
+  const columns = allColumns.filter(Boolean) as ColumnDef<TypedAsset>[]
 
   const table = useReactTable({
     data: assets,

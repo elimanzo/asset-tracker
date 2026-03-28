@@ -1,5 +1,4 @@
-import type { AssetWithRelations } from '@/lib/types'
-import { ASSET_STATUS_LABELS } from '@/lib/types/asset'
+import type { TypedAsset } from '@/lib/types'
 
 import { formatCurrency, formatDate } from './formatters'
 
@@ -31,13 +30,13 @@ function rowToCsv(values: (string | null | undefined)[]): string {
 const COLUMN_DEFS: {
   key: ReportColumn
   header: string
-  value: (a: AssetWithRelations) => string | null | undefined
+  value: (a: TypedAsset) => string | null | undefined
 }[] = [
-  { key: 'assignedTo', header: 'Assigned To', value: (a) => a.currentAssignment?.assignedToName },
+  { key: 'assignedTo', header: 'Assigned To', value: (a) => a.assigneeSummary },
   { key: 'department', header: 'Department', value: (a) => a.departmentName },
   { key: 'category', header: 'Category', value: (a) => a.categoryName },
   { key: 'location', header: 'Location', value: (a) => a.locationName },
-  { key: 'status', header: 'Status', value: (a) => ASSET_STATUS_LABELS[a.status] },
+  { key: 'status', header: 'Status', value: (a) => a.statusLabel },
   { key: 'purchaseDate', header: 'Purchase Date', value: (a) => formatDate(a.purchaseDate) },
   {
     key: 'purchaseCost',
@@ -54,7 +53,7 @@ const COLUMN_DEFS: {
 ]
 
 export function exportAssetsToCsv(
-  assets: AssetWithRelations[],
+  assets: TypedAsset[],
   filename = 'assets.csv',
   visibleColumns?: Set<ReportColumn>
 ): void {

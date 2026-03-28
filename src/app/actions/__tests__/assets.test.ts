@@ -166,7 +166,12 @@ function mockFetchCheckedOut(
 describe('checkoutAsset', () => {
   it('returns error when user is not authenticated', async () => {
     const clients = makeUnauthenticatedClients(chain)
-    const result = await checkoutAsset('asset-0001', makeCheckoutInput(), 'Admin', false, clients)
+    const result = await checkoutAsset(
+      { id: 'asset-0001', isBulk: false },
+      makeCheckoutInput(),
+      'Admin',
+      clients
+    )
     expect(result).toEqual({ error: 'Not authenticated' })
   })
 
@@ -191,10 +196,9 @@ describe('checkoutAsset', () => {
     ])
 
     const result = await checkoutAsset(
-      'asset-0001',
+      { id: 'asset-0001', isBulk: true },
       makeCheckoutInput({ quantity: 1 }),
       'Admin',
-      true,
       clients
     )
     expect(result).toEqual({ error: 'Only 0 available in stock.' })
@@ -224,10 +228,9 @@ describe('checkoutAsset', () => {
     ])
 
     const result = await checkoutAsset(
-      'asset-0001',
+      { id: 'asset-0001', isBulk: true },
       makeCheckoutInput({ quantity: 1 }),
       'Admin',
-      true,
       clients
     )
     expect(result).toEqual({ error: 'This item just went out of stock. Please try again.' })
@@ -251,7 +254,12 @@ describe('checkoutAsset', () => {
       // insert.select.single
       .mockResolvedValueOnce({ data: { id: 'asgn-new-001' }, error: null })
 
-    const result = await checkoutAsset('asset-0001', makeCheckoutInput(), 'Admin', false, clients)
+    const result = await checkoutAsset(
+      { id: 'asset-0001', isBulk: false },
+      makeCheckoutInput(),
+      'Admin',
+      clients
+    )
     expect(result).toBeNull()
   })
 })

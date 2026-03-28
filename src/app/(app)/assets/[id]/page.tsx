@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAsset } from '@/lib/hooks/useAssets'
 import { useAssetHistory } from '@/lib/hooks/useAuditLogs'
 import type { AssetAssignment, AuditLog } from '@/lib/types'
-import { computeAvailable, computeMaxForEdit } from '@/lib/utils/availability'
+import { computeMaxForEdit } from '@/lib/utils/availability'
 import { formatCurrency, formatDate, formatRelativeTime } from '@/lib/utils/formatters'
 import { canEdit } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
@@ -61,10 +61,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
   if (!asset) return notFound()
 
   const canEditAssets = user ? canEdit(user.role) : false
-  const available = asset.isBulk
-    ? computeAvailable(asset.quantity ?? 0, asset.quantityCheckedOut)
-    : null
-  const canCheckOut = asset.isBulk ? (available ?? 0) > 0 : asset.status !== 'checked_out'
+  const canCheckOut = asset.isAvailable
 
   async function handleReturn() {
     await returnAsset(asset!.id)
@@ -136,7 +133,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
               <span className="text-muted-foreground font-mono text-sm">{asset.assetTag}</span>
               {asset.isBulk ? (
                 <Badge variant="secondary">
-                  {available} of {asset.quantity} available
+                  {asset.available} of {asset.quantity} available
                 </Badge>
               ) : (
                 <AssetStatusBadge status={asset.status} />
@@ -180,7 +177,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Available</p>
-                      <p className="text-2xl font-bold text-green-500">{available}</p>
+                      <p className="text-2xl font-bold text-green-500">{asset.available}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -390,11 +387,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
           isBulk={asset.isBulk}
           maxQuantity={
             asset.isBulk
-              ? computeMaxForEdit(
-                  asset.quantity ?? 0,
-                  asset.quantityCheckedOut,
-                  editAssignment.quantity
-                )
+              ? computeMaxForEdit(asset.quantity, asset.quantityCheckedOut, editAssignment.quantity)
               : undefined
           }
           open={!!editAssignment}

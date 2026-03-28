@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AssetWithRelations, ProfileWithDepartments } from '@/lib/types'
+import type { ProfileWithDepartments, SerializedAsset } from '@/lib/types'
 import {
   canEdit,
   canEditAsset,
@@ -36,7 +36,7 @@ function makeUser(
   }
 }
 
-function makeAsset(departmentId: string | null = DEPT_A): AssetWithRelations {
+function makeAsset(departmentId: string | null = DEPT_A): SerializedAsset {
   return {
     id: 'asset-0001',
     orgId: 'org-0001',
@@ -62,9 +62,11 @@ function makeAsset(departmentId: string | null = DEPT_A): AssetWithRelations {
     departmentName: null,
     locationName: null,
     vendorName: null,
-    quantityCheckedOut: 0,
     currentAssignment: null,
-    activeAssignments: [],
+    assigneeSummary: null,
+    statusLabel: 'Active',
+    isAvailable: true,
+    isCheckedOut: false,
   }
 }
 

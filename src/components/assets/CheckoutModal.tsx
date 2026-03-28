@@ -33,13 +33,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDepartments } from '@/lib/hooks/useDepartments'
 import { useLocations } from '@/lib/hooks/useLocations'
 import { CheckoutFormSchema, type CheckoutFormInput } from '@/lib/types'
-import type { AssetWithRelations } from '@/lib/types'
-import { computeAvailable } from '@/lib/utils/availability'
+import type { TypedAsset } from '@/lib/types'
 import { useAuth } from '@/providers/AuthProvider'
 import { useOrg } from '@/providers/OrgProvider'
 
 interface CheckoutModalProps {
-  asset: AssetWithRelations
+  asset: TypedAsset
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
@@ -52,9 +51,7 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
   const { data: departments } = useDepartments()
   const { data: locations } = useLocations()
 
-  const available = asset.isBulk
-    ? computeAvailable(asset.quantity ?? 0, asset.quantityCheckedOut)
-    : null
+  const available = asset.isBulk ? asset.available : null
 
   const form = useForm<CheckoutFormInput>({
     resolver: zodResolver(CheckoutFormSchema),
@@ -71,7 +68,7 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
 
   async function onSubmit(data: CheckoutFormInput) {
     if (!user) return
-    const result = await checkoutAsset(asset.id, data, user.fullName, asset.isBulk)
+    const result = await checkoutAsset(asset, data, user.fullName)
     if (result?.error) {
       form.setError('assignedToName', { message: result.error })
       return
@@ -233,7 +230,7 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={asset.isBulk && available === 0}>
+              <Button type="submit" disabled={!asset.isAvailable}>
                 Check out
               </Button>
             </DialogFooter>
