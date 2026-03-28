@@ -83,15 +83,46 @@ export type AssetAssignment = z.infer<typeof AssetAssignmentSchema>
 // Asset with resolved relations (for display in tables and detail views)
 // ---------------------------------------------------------------------------
 
-export type AssetWithRelations = Asset & {
+type AssetRelations = {
   categoryName: string | null
   departmentName: string | null
   locationName: string | null
   vendorName: string | null
-  quantityCheckedOut: number
-  currentAssignment: AssetAssignment | null // non-bulk: single active assignment
-  activeAssignments: AssetAssignment[] // bulk: all active assignments
 }
+
+/** Pre-computed display fields available on every asset regardless of kind. */
+type AssetDisplay = {
+  /** "Alice" for serialized, "Alice +2 others" for bulk with multiple, null if unassigned. */
+  assigneeSummary: string | null
+  /** "3/10 avail." for bulk; ASSET_STATUS_LABELS value for serialized. */
+  statusLabel: string
+  /** True if the asset can be checked out right now — uniform gate, no branching needed. */
+  isAvailable: boolean
+  isCheckedOut: boolean
+}
+
+export type BulkAsset = Asset &
+  AssetRelations &
+  AssetDisplay & {
+    isBulk: true
+    quantity: number // non-nullable: bulk assets always have a stock count
+    available: number // pre-computed units available for checkout
+    quantityCheckedOut: number
+    activeAssignments: AssetAssignment[]
+  }
+
+export type SerializedAsset = Asset &
+  AssetRelations &
+  AssetDisplay & {
+    isBulk: false
+    quantity: null
+    currentAssignment: AssetAssignment | null
+  }
+
+export type TypedAsset = BulkAsset | SerializedAsset
+
+/** @deprecated Use TypedAsset */
+export type AssetWithRelations = TypedAsset
 
 // ---------------------------------------------------------------------------
 // Create / update forms

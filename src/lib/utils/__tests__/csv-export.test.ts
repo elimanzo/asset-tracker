@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { AssetWithRelations } from '@/lib/types'
+import type { SerializedAsset } from '@/lib/types'
 import { exportAssetsToCsv, type ReportColumn } from '@/lib/utils/csv-export'
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ beforeEach(() => {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function makeAsset(overrides: Partial<AssetWithRelations> = {}): AssetWithRelations {
+function makeAsset(overrides: Partial<SerializedAsset> = {}): SerializedAsset {
   return {
     id: 'asset-0001',
     orgId: 'org-0001',
@@ -58,9 +58,11 @@ function makeAsset(overrides: Partial<AssetWithRelations> = {}): AssetWithRelati
     departmentName: 'Engineering',
     locationName: null,
     vendorName: null,
-    quantityCheckedOut: 0,
     currentAssignment: null,
-    activeAssignments: [],
+    assigneeSummary: null,
+    statusLabel: 'Active',
+    isAvailable: true,
+    isCheckedOut: false,
     ...overrides,
   }
 }

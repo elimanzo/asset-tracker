@@ -251,7 +251,7 @@ export default function ReportsPage() {
                   {visibleCols.map((c) => (
                     <TableCell key={c.key}>
                       <span className="text-muted-foreground text-sm">
-                        {c.key === 'assignedTo' && (a.currentAssignment?.assignedToName ?? '—')}
+                        {c.key === 'assignedTo' && (a.assigneeSummary ?? '—')}
                         {c.key === 'department' && (a.departmentName ?? '—')}
                         {c.key === 'category' && (a.categoryName ?? '—')}
                         {c.key === 'location' && (a.locationName ?? '—')}

@@ -17,13 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { AssetWithRelations } from '@/lib/types'
+import type { TypedAsset } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { canEdit } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
 
 interface AssetCardProps {
-  asset: AssetWithRelations
+  asset: TypedAsset
 }
 
 export function AssetCard({ asset }: AssetCardProps) {
@@ -90,9 +90,9 @@ export function AssetCard({ asset }: AssetCardProps) {
             )}
           </div>
 
-          {asset.currentAssignment && (
+          {asset.assigneeSummary && (
             <p className="text-muted-foreground mt-2 truncate text-xs">
-              Checked out to {asset.currentAssignment.assignedToName}
+              Checked out to {asset.assigneeSummary}
             </p>
           )}
         </CardContent>

@@ -7,6 +7,7 @@ import {
   CheckoutFormSchema,
   type AssetFormInput,
   type CheckoutFormInput,
+  type TypedAsset,
 } from '@/lib/types'
 import { nextTagInSequence, sanitizePrefix } from '@/lib/utils/assetTag'
 import { computeAvailable } from '@/lib/utils/availability'
@@ -189,10 +190,9 @@ export async function deleteAsset(
 }
 
 export async function checkoutAsset(
-  assetId: string,
+  assetRef: Pick<TypedAsset, 'id' | 'isBulk'>,
   input: CheckoutFormInput,
   assignedByName: string,
-  isBulk: boolean,
   clients?: ActionClients
 ): Promise<{ error: string } | null> {
   const parsed = CheckoutFormSchema.safeParse(input)
@@ -200,6 +200,8 @@ export async function checkoutAsset(
 
   const ctx = await getContext(clients)
   if (!ctx) return { error: 'Not authenticated' }
+
+  const { id: assetId, isBulk } = assetRef
 
   const { data: asset } = await ctx.admin
     .from('assets')
@@ -428,15 +430,16 @@ export async function restockAsset(
 /** Edit an existing checkout assignment */
 export async function updateAssignment(
   assignmentId: string,
-  assetId: string,
-  input: CheckoutFormInput,
-  isBulk: boolean
+  assetRef: Pick<TypedAsset, 'id' | 'isBulk'>,
+  input: CheckoutFormInput
 ): Promise<{ error: string } | null> {
   const parsed = CheckoutFormSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const { id: assetId, isBulk } = assetRef
 
   // quantity included here so no separate fetch is needed for bulk validation
   const { data: asset } = await ctx.admin

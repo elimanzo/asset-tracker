@@ -91,7 +91,7 @@ export function EditAssignmentModal({
   }, [assignment.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(data: CheckoutFormInput) {
-    const result = await updateAssignment(assignment.id, assetId, data, isBulk)
+    const result = await updateAssignment(assignment.id, { id: assetId, isBulk }, data)
     if (result?.error) {
       form.setError('assignedToName', { message: result.error })
       return

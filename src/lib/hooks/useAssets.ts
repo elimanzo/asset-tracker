@@ -4,7 +4,15 @@ import { useCallback } from 'react'
 import { getNextTagForPrefix } from '@/app/actions/assets'
 import { ASSET_TAG_PREFIX } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import type { AssetAssignment, AssetStatus, AssetWithRelations } from '@/lib/types'
+import type {
+  AssetAssignment,
+  AssetStatus,
+  BulkAsset,
+  SerializedAsset,
+  TypedAsset,
+} from '@/lib/types'
+import { ASSET_STATUS_LABELS } from '@/lib/types/asset'
+import { computeAvailable } from '@/lib/utils/availability'
 import { canManage } from '@/lib/utils/permissions'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -57,26 +65,30 @@ function mapAssignment(a: AssignmentRow, assetId: string): AssetAssignment {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapAssetRow(row: any): AssetWithRelations {
+function mapAssetRow(row: any): TypedAsset {
   const assignments: AssignmentRow[] = row.asset_assignments ?? []
   const activeRows = assignments.filter((a) => a.returned_at === null)
   const activeAssignments = activeRows.map((a) => mapAssignment(a, row.id as string))
-  const quantityCheckedOut = activeAssignments.reduce((sum, a) => sum + a.quantity, 0)
 
-  return {
+  const assigneeSummary: string | null = (() => {
+    if (activeAssignments.length === 0) return null
+    const first = activeAssignments[0].assignedToName
+    const extra = activeAssignments.length - 1
+    return extra > 0 ? `${first} +${extra} other${extra > 1 ? 's' : ''}` : first
+  })()
+
+  const base = {
     id: row.id as string,
     orgId: row.org_id as string,
     assetTag: row.asset_tag as string,
     name: row.name as string,
-    isBulk: (row.is_bulk as boolean) ?? false,
-    quantity: (row.quantity as number | null) ?? null,
     categoryId: (row.category_id as string | null) ?? null,
     categoryName: (row.categories as { name: string } | null)?.name ?? null,
     departmentId: (row.department_id as string | null) ?? null,
     departmentName: (row.departments as { name: string } | null)?.name ?? null,
     locationId: (row.location_id as string | null) ?? null,
     locationName: (row.locations as { name: string } | null)?.name ?? null,
-    status: row.status as AssetWithRelations['status'],
+    status: row.status as SerializedAsset['status'],
     purchaseDate: (row.purchase_date as string | null) ?? null,
     purchaseCost: (row.purchase_cost as number | null) ?? null,
     warrantyExpiry: (row.warranty_expiry as string | null) ?? null,
@@ -88,10 +100,33 @@ function mapAssetRow(row: any): AssetWithRelations {
     updatedAt: row.updated_at as string,
     createdBy: (row.created_by as string) ?? '',
     updatedBy: (row.updated_by as string) ?? '',
-    quantityCheckedOut,
-    activeAssignments,
-    currentAssignment: activeAssignments[0] ?? null,
+    isCheckedOut: activeAssignments.length > 0,
+    assigneeSummary,
   }
+
+  if (row.is_bulk as boolean) {
+    const quantityCheckedOut = activeAssignments.reduce((sum, a) => sum + a.quantity, 0)
+    const available = computeAvailable(row.quantity as number, quantityCheckedOut)
+    return {
+      ...base,
+      isBulk: true,
+      quantity: row.quantity as number,
+      available,
+      quantityCheckedOut,
+      activeAssignments,
+      isAvailable: available > 0,
+      statusLabel: `${available}/${row.quantity as number} avail.`,
+    } satisfies BulkAsset
+  }
+
+  return {
+    ...base,
+    isBulk: false,
+    quantity: null,
+    currentAssignment: activeAssignments[0] ?? null,
+    isAvailable: activeAssignments.length === 0,
+    statusLabel: ASSET_STATUS_LABELS[row.status as AssetStatus],
+  } satisfies SerializedAsset
 }
 
 const ASSET_SELECT = `
@@ -117,7 +152,7 @@ const ASSET_SELECT = `
 // ---------------------------------------------------------------------------
 
 export type PaginatedAssets = {
-  data: AssetWithRelations[]
+  data: TypedAsset[]
   totalCount: number
   isLoading: boolean
   refresh: () => void
@@ -202,7 +237,7 @@ export function useAssets(filters: AssetFilters = {}, page = 1, pageSize = 25): 
 // ---------------------------------------------------------------------------
 
 export function useAsset(id: string): {
-  data: AssetWithRelations | null
+  data: TypedAsset | null
   isLoading: boolean
   refresh: () => void
 } {
