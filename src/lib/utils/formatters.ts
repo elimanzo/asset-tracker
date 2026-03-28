@@ -1,7 +1,5 @@
 import { format, formatDistanceToNow, parseISO } from 'date-fns'
 
-import { ASSET_TAG_PREFIX } from '@/lib/constants'
-
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
@@ -31,11 +29,6 @@ export function formatRelativeTime(dateStr: string | null | undefined): string {
   } catch {
     return '—'
   }
-}
-
-/** Generate the next asset tag given a running count, e.g. "AST-00042" */
-export function generateAssetTag(count: number): string {
-  return `${ASSET_TAG_PREFIX}-${String(count).padStart(5, '0')}`
 }
 
 /** Auto-generate an org slug from a name */

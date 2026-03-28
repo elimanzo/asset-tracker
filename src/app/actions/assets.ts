@@ -8,6 +8,7 @@ import {
   type AssetFormInput,
   type CheckoutFormInput,
 } from '@/lib/types'
+import { nextTagInSequence, sanitizePrefix } from '@/lib/utils/assetTag'
 import { computeAvailable } from '@/lib/utils/availability'
 
 import { logAudit } from './_audit'
@@ -469,20 +470,6 @@ export async function updateAssignment(
   return null
 }
 
-/** Count non-deleted assets in the org — used to generate the next asset tag */
-export async function getAssetCount(): Promise<number> {
-  const ctx = await getContext()
-  if (!ctx) return 0
-
-  const { count } = await ctx.admin
-    .from('assets')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', ctx.orgId)
-    .is('deleted_at', null)
-
-  return count ?? 0
-}
-
 /** Return distinct tag prefixes used in the org (everything before the last '-') */
 export async function getTagPrefixes(): Promise<string[]> {
   const ctx = await getContext()
@@ -507,9 +494,11 @@ export async function getTagPrefixes(): Promise<string[]> {
 
 /** Return the next tag for a given prefix (e.g. "LAPTOP" → "LAPTOP-0001") */
 export async function getNextTagForPrefix(prefix: string): Promise<string> {
+  const sanitized = sanitizePrefix(prefix)
+  if (!sanitized) return `${prefix}-0001`
+
   const ctx = await getContext()
-  const sanitized = prefix.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  if (!sanitized || !ctx) return `${sanitized || prefix}-0001`
+  if (!ctx) return `${sanitized}-0001`
 
   const { data } = await ctx.admin
     .from('assets')
@@ -518,14 +507,8 @@ export async function getNextTagForPrefix(prefix: string): Promise<string> {
     .is('deleted_at', null)
     .ilike('asset_tag', `${sanitized}-%`)
 
-  let max = 0
-  for (const { asset_tag } of (data ?? []) as { asset_tag: string }[]) {
-    const match = new RegExp(`^${sanitized}-(\\d+)$`, 'i').exec(asset_tag)
-    if (match) {
-      const n = parseInt(match[1], 10)
-      if (n > max) max = n
-    }
-  }
-
-  return `${sanitized}-${String(max + 1).padStart(4, '0')}`
+  return nextTagInSequence(
+    sanitized,
+    (data ?? []).map((r) => (r as { asset_tag: string }).asset_tag)
+  )
 }
