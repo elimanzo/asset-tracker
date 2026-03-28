@@ -1,6 +1,6 @@
 'use server'
 
-import type { VendorFormInput } from '@/lib/types'
+import { VendorFormSchema, type VendorFormInput } from '@/lib/types'
 
 import { logAudit } from './_audit'
 import { getContext } from './_context'
@@ -8,6 +8,9 @@ import { getContext } from './_context'
 export async function createVendor(
   input: VendorFormInput
 ): Promise<{ id: string } | { error: string }> {
+  const parsed = VendorFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -40,6 +43,9 @@ export async function updateVendor(
   id: string,
   input: VendorFormInput
 ): Promise<{ error: string } | null> {
+  const parsed = VendorFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 

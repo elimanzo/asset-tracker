@@ -1,6 +1,11 @@
 'use server'
 
-import type { AssetFormInput, CheckoutFormInput } from '@/lib/types'
+import {
+  AssetFormSchema,
+  CheckoutFormSchema,
+  type AssetFormInput,
+  type CheckoutFormInput,
+} from '@/lib/types'
 
 import { logAudit } from './_audit'
 import { getContext } from './_context'
@@ -8,6 +13,9 @@ import { getContext } from './_context'
 export async function createAsset(
   input: AssetFormInput
 ): Promise<{ error: string } | { id: string }> {
+  const parsed = AssetFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -53,6 +61,9 @@ export async function updateAsset(
   id: string,
   input: AssetFormInput
 ): Promise<{ error: string } | null> {
+  const parsed = AssetFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -139,6 +150,9 @@ export async function checkoutAsset(
   assignedByName: string,
   isBulk: boolean
 ): Promise<{ error: string } | null> {
+  const parsed = CheckoutFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
@@ -345,6 +359,9 @@ export async function updateAssignment(
   input: CheckoutFormInput,
   isBulk: boolean
 ): Promise<{ error: string } | null> {
+  const parsed = CheckoutFormSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
