@@ -24,7 +24,7 @@ beforeEach(() => {
 describe('updateUserRoleAction', () => {
   it('returns error when actor profile has no organisation', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single.mockResolvedValueOnce({ data: null })
+    chain.maybeSingle.mockResolvedValueOnce({ data: null })
 
     const result = await updateUserRoleAction(TARGET_ID, 'editor', clients)
 
@@ -33,7 +33,7 @@ describe('updateUserRoleAction', () => {
 
   it('returns error when actor role is not owner or admin', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single.mockResolvedValueOnce({
+    chain.maybeSingle.mockResolvedValueOnce({
       data: { org_id: 'org-0001', role: 'editor', full_name: 'Actor' },
     })
 
@@ -44,7 +44,7 @@ describe('updateUserRoleAction', () => {
 
   it('returns error when actor tries to change their own role', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single.mockResolvedValueOnce({
+    chain.maybeSingle.mockResolvedValueOnce({
       data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' },
     })
 
@@ -55,9 +55,10 @@ describe('updateUserRoleAction', () => {
 
   it('returns error when target user is not found in the org', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single
-      .mockResolvedValueOnce({ data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' } })
-      .mockResolvedValueOnce({ data: null })
+    chain.maybeSingle.mockResolvedValueOnce({
+      data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' },
+    })
+    chain.single.mockResolvedValueOnce({ data: null })
 
     const result = await updateUserRoleAction(TARGET_ID, 'editor', clients)
 
@@ -66,9 +67,10 @@ describe('updateUserRoleAction', () => {
 
   it('returns error when target user is the org owner', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single
-      .mockResolvedValueOnce({ data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' } })
-      .mockResolvedValueOnce({ data: { role: 'owner' } })
+    chain.maybeSingle.mockResolvedValueOnce({
+      data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' },
+    })
+    chain.single.mockResolvedValueOnce({ data: { role: 'owner', full_name: 'Owner' } })
 
     const result = await updateUserRoleAction(TARGET_ID, 'editor', clients)
 
@@ -77,10 +79,10 @@ describe('updateUserRoleAction', () => {
 
   it('returns null error on successful role change', async () => {
     const clients = makeClients(chain, { userId: ACTOR_ID })
-    chain.single
-      .mockResolvedValueOnce({ data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' } })
-      .mockResolvedValueOnce({ data: { role: 'editor' } })
-    chain.maybeSingle.mockResolvedValueOnce({ data: { full_name: 'Target User' } })
+    chain.maybeSingle.mockResolvedValueOnce({
+      data: { org_id: 'org-0001', role: 'admin', full_name: 'Actor' },
+    })
+    chain.single.mockResolvedValueOnce({ data: { role: 'editor', full_name: 'Target User' } })
 
     const result = await updateUserRoleAction(TARGET_ID, 'viewer', clients)
 

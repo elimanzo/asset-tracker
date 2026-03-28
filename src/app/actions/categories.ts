@@ -14,6 +14,9 @@ export async function createCategory(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { data, error } = await ctx.admin
     .from('categories')
     .insert({
@@ -46,6 +49,9 @@ export async function updateCategory(
 
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { error } = await ctx.admin
     .from('categories')
@@ -82,6 +88,9 @@ export async function countAssetsInCategory(id: string): Promise<number> {
 export async function deleteCategory(id: string): Promise<{ error: string } | null> {
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { data: cat } = await ctx.admin.from('categories').select('name').eq('id', id).maybeSingle()
 

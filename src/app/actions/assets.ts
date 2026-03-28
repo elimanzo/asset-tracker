@@ -11,7 +11,7 @@ import {
 
 import { logAudit } from './_audit'
 import type { ActionClients } from './_context'
-import { getContext } from './_context'
+import { getContext, requireCanEdit } from './_context'
 
 export async function createAsset(
   input: AssetFormInput,
@@ -22,6 +22,9 @@ export async function createAsset(
 
   const ctx = await getContext(clients)
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = requireCanEdit(ctx, input.departmentId ?? null)
+  if (denied) return denied
 
   const { data, error } = await ctx.admin
     .from('assets')
@@ -63,20 +66,24 @@ export async function createAsset(
 
 export async function updateAsset(
   id: string,
-  input: AssetFormInput
+  input: AssetFormInput,
+  clients?: ActionClients
 ): Promise<{ error: string } | null> {
   const parsed = AssetFormSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const ctx = await getContext()
+  const ctx = await getContext(clients)
   if (!ctx) return { error: 'Not authenticated' }
 
-  // Fetch old values for change tracking
+  // Fetch old values for change tracking and permission check
   const { data: old } = await ctx.admin
     .from('assets')
     .select('name, status, category_id, department_id, location_id, quantity')
     .eq('id', id)
     .maybeSingle()
+
+  const denied = requireCanEdit(ctx, (old?.department_id as string | null) ?? null)
+  if (denied) return denied
 
   const { error } = await ctx.admin
     .from('assets')
@@ -131,7 +138,14 @@ export async function deleteAsset(
   const ctx = await getContext(clients)
   if (!ctx) return { error: 'Not authenticated' }
 
-  const { data: asset } = await ctx.admin.from('assets').select('name').eq('id', id).maybeSingle()
+  const { data: asset } = await ctx.admin
+    .from('assets')
+    .select('name, department_id')
+    .eq('id', id)
+    .maybeSingle()
+
+  const denied = requireCanEdit(ctx, (asset?.department_id as string | null) ?? null)
+  if (denied) return denied
 
   const { error } = await ctx.admin
     .from('assets')
@@ -166,9 +180,12 @@ export async function checkoutAsset(
 
   const { data: asset } = await ctx.admin
     .from('assets')
-    .select('name, quantity')
+    .select('name, quantity, department_id')
     .eq('id', assetId)
     .single()
+
+  const denied = requireCanEdit(ctx, (asset?.department_id as string | null) ?? null)
+  if (denied) return denied
 
   if (isBulk) {
     const { data: activeRows } = await ctx.admin
@@ -241,9 +258,12 @@ export async function returnAsset(assetId: string): Promise<{ error: string } | 
 
   const { data: asset } = await ctx.admin
     .from('assets')
-    .select('name')
+    .select('name, department_id')
     .eq('id', assetId)
     .maybeSingle()
+
+  const denied = requireCanEdit(ctx, (asset?.department_id as string | null) ?? null)
+  if (denied) return denied
 
   const { error: assignError } = await ctx.admin
     .from('asset_assignments')
@@ -284,11 +304,21 @@ export async function returnBulkAssignment(
 
   const { data: row } = await ctx.admin
     .from('asset_assignments')
-    .select('quantity, assigned_to_name, asset_id, assets(name)')
+    .select('quantity, assigned_to_name, asset_id, assets(name, department_id)')
     .eq('id', assignmentId)
     .single()
 
   if (!row) return { error: 'Assignment not found.' }
+
+  const assetJoin = row.assets as
+    | { name: string; department_id: string | null }
+    | { name: string; department_id: string | null }[]
+    | null
+  const assetDeptId =
+    (Array.isArray(assetJoin) ? assetJoin[0]?.department_id : assetJoin?.department_id) ?? null
+
+  const denied = requireCanEdit(ctx, assetDeptId)
+  if (denied) return denied
 
   const remaining = (row.quantity as number) - quantityToReturn
 
@@ -306,7 +336,6 @@ export async function returnBulkAssignment(
     if (error) return { error: error.message }
   }
 
-  const assetJoin = row.assets as { name: string } | { name: string }[] | null
   const assetName =
     (Array.isArray(assetJoin) ? assetJoin[0]?.name : assetJoin?.name) ?? 'Unknown asset'
 
@@ -334,9 +363,12 @@ export async function restockAsset(
 
   const { data: asset } = await ctx.admin
     .from('assets')
-    .select('name, quantity')
+    .select('name, quantity, department_id')
     .eq('id', assetId)
     .single()
+
+  const denied = requireCanEdit(ctx, (asset?.department_id as string | null) ?? null)
+  if (denied) return denied
 
   const oldQuantity = (asset?.quantity ?? 0) as number
   const newQuantity = oldQuantity + additionalQuantity
@@ -373,9 +405,18 @@ export async function updateAssignment(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const { data: asset } = await ctx.admin
+    .from('assets')
+    .select('name, department_id')
+    .eq('id', assetId)
+    .maybeSingle()
+
+  const denied = requireCanEdit(ctx, (asset?.department_id as string | null) ?? null)
+  if (denied) return denied
+
   if (isBulk) {
     // Validate: new quantity must not exceed available + what this assignment currently holds
-    const { data: asset } = await ctx.admin
+    const { data: stockRow } = await ctx.admin
       .from('assets')
       .select('quantity')
       .eq('id', assetId)
@@ -391,19 +432,13 @@ export async function updateAssignment(
     const otherCheckedOut = (activeRows ?? [])
       .filter((r: { id: string; quantity: number }) => r.id !== assignmentId)
       .reduce((sum: number, r: { quantity: number }) => sum + (r.quantity ?? 1), 0)
-    const maxAllowed = (asset?.quantity ?? 0) - otherCheckedOut
+    const maxAllowed = (stockRow?.quantity ?? 0) - otherCheckedOut
     if (input.quantity > maxAllowed) {
       return {
         error: `Only ${maxAllowed} available (${currentRow?.quantity ?? 0} currently on this assignment).`,
       }
     }
   }
-
-  const { data: asset } = await ctx.admin
-    .from('assets')
-    .select('name')
-    .eq('id', assetId)
-    .maybeSingle()
 
   const { error } = await ctx.admin
     .from('asset_assignments')

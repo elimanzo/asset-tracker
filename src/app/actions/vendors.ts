@@ -14,6 +14,9 @@ export async function createVendor(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { data, error } = await ctx.admin
     .from('vendors')
     .insert({
@@ -49,6 +52,9 @@ export async function updateVendor(
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
 
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
+
   const { error } = await ctx.admin
     .from('vendors')
     .update({
@@ -76,6 +82,9 @@ export async function updateVendor(
 export async function deleteVendor(id: string): Promise<{ error: string } | null> {
   const ctx = await getContext()
   if (!ctx) return { error: 'Not authenticated' }
+
+  const denied = ctx.requireRole('admin')
+  if (denied) return denied
 
   const { data: vendor } = await ctx.admin.from('vendors').select('name').eq('id', id).maybeSingle()
 
