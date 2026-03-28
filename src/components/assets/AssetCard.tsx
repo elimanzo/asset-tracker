@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -28,6 +29,7 @@ interface AssetCardProps {
 export function AssetCard({ asset }: AssetCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const canEditAssets = user ? canEdit(user.role) : false
 
   return (
@@ -103,8 +105,9 @@ export function AssetCard({ asset }: AssetCardProps) {
         description="This will permanently remove the asset. This action cannot be undone."
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          deleteAsset(asset.id)
+        onConfirm={async () => {
+          await deleteAsset(asset.id)
+          queryClient.invalidateQueries({ queryKey: ['assets'] })
           setConfirmDelete(false)
         }}
       />
