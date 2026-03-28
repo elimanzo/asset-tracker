@@ -1,5 +1,7 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+
 import {
   AssetFormSchema,
   CheckoutFormSchema,
@@ -141,6 +143,7 @@ export async function deleteAsset(id: string): Promise<{ error: string } | null>
     action: 'deleted',
   })
 
+  revalidatePath('/assets')
   return null
 }
 

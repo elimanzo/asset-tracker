@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import {
   type ColumnDef,
   flexRender,
@@ -53,6 +54,7 @@ export function AssetTable({ assets }: AssetTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const { user } = useAuth()
   const { org } = useOrg()
+  const queryClient = useQueryClient()
   const deptLabel = org?.departmentLabel ?? 'Department'
   const tc = org?.assetTableConfig ?? {}
 
@@ -366,8 +368,11 @@ export function AssetTable({ assets }: AssetTableProps) {
         description="This will permanently remove the asset. This action cannot be undone."
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          if (deleteId) deleteAsset(deleteId)
+        onConfirm={async () => {
+          if (deleteId) {
+            await deleteAsset(deleteId)
+            queryClient.invalidateQueries({ queryKey: ['assets'] })
+          }
           setDeleteId(null)
         }}
       />
