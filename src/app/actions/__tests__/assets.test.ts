@@ -1,13 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 import type { AssetFormInput } from '@/lib/types'
 
 import { createAsset, deleteAsset } from '../assets'
 
-vi.mock('@/lib/supabase/server')
-vi.mock('@/lib/supabase/admin')
+import { makeChain, makeClients, makeUnauthenticatedClients } from './_helpers'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -31,56 +28,7 @@ function makeInput(overrides: Partial<AssetFormInput> = {}): AssetFormInput {
   }
 }
 
-function makeChain() {
-  return {
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    not: vi.fn().mockReturnThis(),
-    gt: vi.fn().mockReturnThis(),
-    ilike: vi.fn().mockReturnThis(),
-    single: vi.fn(),
-    maybeSingle: vi.fn(),
-    then: vi
-      .fn()
-      .mockImplementation((resolve: (v: unknown) => void, reject: (e: unknown) => void) =>
-        Promise.resolve({ data: null, error: null }).then(resolve, reject)
-      ),
-  }
-}
-
 let chain: ReturnType<typeof makeChain>
-
-function setupAuthenticatedUser(userId = 'user-0001') {
-  vi.mocked(createClient).mockResolvedValue({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }),
-    },
-  } as unknown as Awaited<ReturnType<typeof createClient>>)
-  vi.mocked(createAdminClient).mockReturnValue({
-    from: vi.fn().mockReturnValue(chain),
-    auth: { admin: {} },
-  } as unknown as ReturnType<typeof createAdminClient>)
-  // getContext maybeSingle: org profile
-  chain.maybeSingle.mockResolvedValueOnce({
-    data: { org_id: 'org-0001', full_name: 'Test User' },
-  })
-}
-
-function setupUnauthenticated() {
-  vi.mocked(createClient).mockResolvedValue({
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
-    },
-  } as unknown as Awaited<ReturnType<typeof createClient>>)
-  vi.mocked(createAdminClient).mockReturnValue({
-    from: vi.fn().mockReturnValue(chain),
-    auth: { admin: {} },
-  } as unknown as ReturnType<typeof createAdminClient>)
-}
 
 beforeEach(() => {
   chain = makeChain()
@@ -97,27 +45,29 @@ describe('createAsset', () => {
   })
 
   it('returns error when user is not authenticated', async () => {
-    setupUnauthenticated()
-    const result = await createAsset(makeInput())
+    const clients = makeUnauthenticatedClients(chain)
+    const result = await createAsset(makeInput(), clients)
     expect(result).toEqual({ error: 'Not authenticated' })
   })
 
   it('returns friendly error on duplicate asset tag (23505)', async () => {
-    setupAuthenticatedUser()
+    const clients = makeClients(chain)
+    chain.maybeSingle.mockResolvedValueOnce({ data: { org_id: 'org-0001', full_name: 'User' } })
     chain.single.mockResolvedValueOnce({
       data: null,
       error: { code: '23505', message: 'unique violation' },
     })
 
-    const result = await createAsset(makeInput())
+    const result = await createAsset(makeInput(), clients)
     expect(result).toEqual({ error: 'Asset tag already exists. Use a unique tag.' })
   })
 
   it('returns the new asset id on success', async () => {
-    setupAuthenticatedUser()
+    const clients = makeClients(chain)
+    chain.maybeSingle.mockResolvedValueOnce({ data: { org_id: 'org-0001', full_name: 'User' } })
     chain.single.mockResolvedValueOnce({ data: { id: 'asset-new-001' }, error: null })
 
-    const result = await createAsset(makeInput())
+    const result = await createAsset(makeInput(), clients)
     expect(result).toEqual({ id: 'asset-new-001' })
   })
 })
@@ -128,31 +78,32 @@ describe('createAsset', () => {
 
 describe('deleteAsset', () => {
   it('returns error when user is not authenticated', async () => {
-    setupUnauthenticated()
-    const result = await deleteAsset('asset-0001')
+    const clients = makeUnauthenticatedClients(chain)
+    const result = await deleteAsset('asset-0001', clients)
     expect(result).toEqual({ error: 'Not authenticated' })
   })
 
   it('returns error when the database update fails', async () => {
-    setupAuthenticatedUser()
-    // maybySingle #2: asset name lookup
-    chain.maybeSingle.mockResolvedValueOnce({ data: { name: 'Test Laptop' } })
-    // then: assets update → DB error
+    const clients = makeClients(chain)
+    chain.maybeSingle
+      .mockResolvedValueOnce({ data: { org_id: 'org-0001', full_name: 'User' } })
+      .mockResolvedValueOnce({ data: { name: 'Test Laptop' } })
     chain.then.mockImplementationOnce(
       (resolve: (v: unknown) => void, reject: (e: unknown) => void) =>
         Promise.resolve({ data: null, error: { message: 'Row not found' } }).then(resolve, reject)
     )
 
-    const result = await deleteAsset('asset-0001')
+    const result = await deleteAsset('asset-0001', clients)
     expect(result).toEqual({ error: 'Row not found' })
   })
 
   it('returns null on successful soft-delete', async () => {
-    setupAuthenticatedUser()
-    // maybySingle #2: asset name lookup
-    chain.maybeSingle.mockResolvedValueOnce({ data: { name: 'Test Laptop' } })
+    const clients = makeClients(chain)
+    chain.maybeSingle
+      .mockResolvedValueOnce({ data: { org_id: 'org-0001', full_name: 'User' } })
+      .mockResolvedValueOnce({ data: { name: 'Test Laptop' } })
 
-    const result = await deleteAsset('asset-0001')
+    const result = await deleteAsset('asset-0001', clients)
     expect(result).toBeNull()
   })
 })
