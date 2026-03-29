@@ -1,7 +1,6 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 
 import type { ActionClients } from './_context'
 
@@ -58,20 +57,18 @@ export async function completeInviteForGoogleUser(
   return { destination: '/dashboard' }
 }
 
+// Takes userId directly — called from the auth callback where the session is
+// already established client-side, so we avoid a server-side getUser() call
+// that may fail before the session cookie is written.
 export async function googleSignInDestination(
+  userId: string,
   clients?: ActionClients
-): Promise<{ destination: string } | { error: string }> {
-  const supabase = clients?.supabase ?? (await createClient())
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
+): Promise<{ destination: string }> {
   const admin = clients?.admin ?? createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
     .select('org_id')
-    .eq('id', user.id)
+    .eq('id', userId)
     .maybeSingle()
 
   return { destination: profile?.org_id ? '/dashboard' : '/org/new' }

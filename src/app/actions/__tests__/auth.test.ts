@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { completeInviteForGoogleUser, googleSignInDestination } from '../auth'
 
-import { makeChain, makeClients, makeUnauthenticatedClients } from './_helpers'
+import { makeChain, makeClients } from './_helpers'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -23,7 +23,7 @@ describe('googleSignInDestination', () => {
     const clients = makeClients(chain)
     chain.maybeSingle.mockResolvedValueOnce({ data: { org_id: 'org-0001' } })
 
-    const result = await googleSignInDestination(clients)
+    const result = await googleSignInDestination('user-001', clients)
 
     expect(result).toEqual({ destination: '/dashboard' })
   })
@@ -32,17 +32,9 @@ describe('googleSignInDestination', () => {
     const clients = makeClients(chain)
     chain.maybeSingle.mockResolvedValueOnce({ data: { org_id: null } })
 
-    const result = await googleSignInDestination(clients)
+    const result = await googleSignInDestination('user-001', clients)
 
     expect(result).toEqual({ destination: '/org/new' })
-  })
-
-  it('returns error when not authenticated', async () => {
-    const clients = makeUnauthenticatedClients(chain)
-
-    const result = await googleSignInDestination(clients)
-
-    expect(result).toEqual({ error: 'Not authenticated' })
   })
 })
 

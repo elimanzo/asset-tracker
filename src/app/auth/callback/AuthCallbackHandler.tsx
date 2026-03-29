@@ -79,12 +79,8 @@ export function AuthCallbackHandler() {
           }
 
           // 2. No pending invite — route based on whether user has an org
-          const result = await googleSignInDestination()
+          const result = await googleSignInDestination(session.user.id)
           if (cancelled) return
-          if ('error' in result) {
-            router.replace('/login?error=auth_failed')
-            return
-          }
           // Pre-fill display name from Google profile when sending to org wizard
           if (result.destination === '/org/new' && session.user.user_metadata?.full_name) {
             const name = encodeURIComponent(session.user.user_metadata.full_name as string)
