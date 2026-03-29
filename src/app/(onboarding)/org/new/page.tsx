@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 
@@ -23,11 +23,16 @@ import { useOnboarding } from '@/providers/OnboardingProvider'
 
 export default function CreateOrgPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { name, slug, setOrgInfo } = useOnboarding()
+
+  // ?name= is set by the auth callback when arriving via Google sign-in
+  const googleName = searchParams.get('name') ?? ''
+  const initialName = name || googleName
 
   const form = useForm<CreateOrganizationInput>({
     resolver: zodResolver(CreateOrganizationSchema),
-    defaultValues: { name, slug },
+    defaultValues: { name: initialName, slug },
   })
 
   // Restore context state if user navigated back
