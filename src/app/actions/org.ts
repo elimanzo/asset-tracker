@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateOrganizationInput, UpdateOrganizationInput } from '@/lib/types'
+import type { UserRole } from '@/lib/types'
+import { canManage } from '@/lib/utils/permissions'
 
 export async function checkOrgAvailability(
   name: string,
@@ -25,7 +27,7 @@ export async function completeOnboardingSetup(
   org: { name: string; slug: string },
   departments: string[],
   categories: string[]
-): Promise<{ error: string } | never> {
+): Promise<{ error: string } | { error: null }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -50,22 +52,29 @@ export async function completeOnboardingSetup(
     return { error: orgError.message }
   }
 
-  await admin
+  const { error: profileError } = await admin
     .from('profiles')
     .update({ org_id: orgData.id, invite_status: 'active' })
     .eq('id', user.id)
 
+  if (profileError) return { error: profileError.message }
+
   if (departments.length > 0) {
-    await admin
+    const { error: deptError } = await admin
       .from('departments')
       .insert(departments.map((name) => ({ name, org_id: orgData.id })))
+    if (deptError) return { error: deptError.message }
   }
 
   if (categories.length > 0) {
-    await admin.from('categories').insert(categories.map((name) => ({ name, org_id: orgData.id })))
+    const { error: catError } = await admin
+      .from('categories')
+      .insert(categories.map((name) => ({ name, org_id: orgData.id })))
+    if (catError) return { error: catError.message }
   }
 
-  redirect('/dashboard')
+  // Return success — client will do a full-page navigation to flush stale AuthProvider state
+  return { error: null }
 }
 
 export async function createOrganization(
@@ -118,6 +127,7 @@ export async function updateOrganization(
     .single()
 
   if (!profile?.org_id) return { error: 'No organisation found' }
+  if (!canManage(profile.role as UserRole)) return { error: 'Not authorised' }
 
   const isOwner = profile.role === 'owner'
 
@@ -137,4 +147,62 @@ export async function updateOrganization(
   }
 
   return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// deleteOrgAction
+// ---------------------------------------------------------------------------
+
+export async function deleteOrgAction(): Promise<{ error: string } | { error: null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.org_id) return { error: 'No organisation found' }
+  if (profile.role !== 'owner') return { error: 'Only the organisation owner can delete it' }
+
+  const orgId = profile.org_id as string
+
+  // Detach all members first so their accounts survive the org deletion
+  const { error: detachMembersError } = await admin
+    .from('profiles')
+    .update({
+      org_id: null,
+      role: 'viewer',
+      invite_status: 'pending',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('org_id', orgId)
+    .neq('id', user.id)
+
+  if (detachMembersError) return { error: detachMembersError.message }
+
+  // Clear owner's own profile
+  const { error: detachOwnerError } = await admin
+    .from('profiles')
+    .update({
+      org_id: null,
+      role: 'viewer',
+      invite_status: 'pending',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (detachOwnerError) return { error: detachOwnerError.message }
+
+  // Delete the org — cascades departments, categories, locations, vendors,
+  // assets, invites, audit_logs, user_departments
+  const { error } = await admin.from('organizations').delete().eq('id', orgId)
+
+  return { error: error?.message ?? null }
 }

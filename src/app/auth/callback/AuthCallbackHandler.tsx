@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { completeInviteForGoogleUser, googleSignInDestination } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 
 export function AuthCallbackHandler() {
@@ -44,16 +45,52 @@ export function AuthCallbackHandler() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      const succeeded =
-        event === 'PASSWORD_RECOVERY' ||
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      const isPasswordRecovery = event === 'PASSWORD_RECOVERY'
+      const isSignedIn =
         (event === 'SIGNED_IN' && !!session) ||
         (!codeInUrl && event === 'INITIAL_SESSION' && !!session)
 
-      if (succeeded) {
+      if (isPasswordRecovery) {
         clearTimeout(timeout.current)
         subscription.unsubscribe()
         router.replace(next)
+        return
+      }
+
+      if (isSignedIn) {
+        clearTimeout(timeout.current)
+        subscription.unsubscribe()
+
+        // For Google OAuth (PKCE code flow with no explicit `next`), determine
+        // the correct destination based on pending invites and org membership.
+        if (!searchParams.get('next')) {
+          // 1. Check for a pending invite and auto-complete it if found
+          const email = session.user.email ?? ''
+          const inviteResult = await completeInviteForGoogleUser(session.user.id, email)
+          if (cancelled) return
+          if ('error' in inviteResult) {
+            router.replace('/login?error=auth_failed')
+            return
+          }
+          if (inviteResult.destination !== null) {
+            router.replace(inviteResult.destination)
+            return
+          }
+
+          // 2. No pending invite — route based on whether user has an org
+          const result = await googleSignInDestination(session.user.id)
+          if (cancelled) return
+          // Pre-fill display name from Google profile when sending to org wizard
+          if (result.destination === '/org/new' && session.user.user_metadata?.full_name) {
+            const name = encodeURIComponent(session.user.user_metadata.full_name as string)
+            router.replace(`/org/new?name=${name}`)
+          } else {
+            router.replace(result.destination)
+          }
+        } else {
+          router.replace(next)
+        }
       }
     })
 
@@ -64,10 +101,11 @@ export function AuthCallbackHandler() {
     }, 4000)
 
     return () => {
+      cancelled = true
       clearTimeout(timeout.current)
       subscription.unsubscribe()
     }
-  }, [next, router])
+  }, [next, router, searchParams])
 
   return (
     <div className="flex min-h-screen items-center justify-center">

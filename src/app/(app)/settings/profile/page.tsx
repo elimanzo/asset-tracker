@@ -1,9 +1,11 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { updateProfileAction } from '@/app/actions/profile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -19,8 +21,11 @@ import { USER_ROLE_CONFIG } from '@/lib/constants'
 import { UpdateProfileSchema, type UpdateProfileInput } from '@/lib/types'
 import { useAuth } from '@/providers/AuthProvider'
 
+import { DangerZone } from './DangerZone'
+
 export default function ProfileSettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
+  const hasOrg = !!user?.orgId
 
   const form = useForm<UpdateProfileInput>({
     resolver: zodResolver(UpdateProfileSchema),
@@ -29,13 +34,32 @@ export default function ProfileSettingsPage() {
     },
   })
 
-  function onSubmit(_data: UpdateProfileInput) {
-    // Phase 2: persist to Supabase + update auth context
+  async function onSubmit(data: UpdateProfileInput) {
+    const result = await updateProfileAction(data)
+    if (result.error) {
+      toast.error(result.error)
+      return
+    }
+    await refreshUser()
     toast.success('Profile updated')
   }
 
   return (
     <div className="space-y-6">
+      {!hasOrg && (
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Get started</CardTitle>
+            <CardDescription>You are not part of an organisation yet.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/org/new">Continue to org setup</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Profile</CardTitle>
@@ -61,15 +85,19 @@ export default function ProfileSettingsPage() {
                 <FormLabel>Email</FormLabel>
                 <Input value={user?.email ?? ''} disabled />
               </FormItem>
-              <FormItem>
-                <FormLabel>Role</FormLabel>
-                <Input value={user ? USER_ROLE_CONFIG[user.role].label : ''} disabled />
-              </FormItem>
+              {hasOrg && (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Input value={user ? USER_ROLE_CONFIG[user.role].label : ''} disabled />
+                </FormItem>
+              )}
               <Button type="submit">Save changes</Button>
             </form>
           </Form>
         </CardContent>
       </Card>
+
+      <DangerZone />
     </div>
   )
 }

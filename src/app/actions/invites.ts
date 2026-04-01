@@ -1,5 +1,6 @@
 'use server'
 
+import { createClient as createRawClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -74,6 +75,39 @@ export async function sendInviteAction(
   const next = `/invite/accept?org=${encodeURIComponent(orgName)}`
   const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
+  // Check if an auth user already exists for this email (e.g. they previously had an org
+  // and deleted it, or left). inviteUserByEmail fails for existing users, so send a magic
+  // link instead — they'll sign in and land on the invite accept page.
+  const { data: existingProfile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existingProfile) {
+    // Use a raw client with implicit flow so the magic link uses hash tokens
+    // (#access_token=…) instead of a PKCE code. signInWithOtp called server-side
+    // would store the PKCE verifier in the admin's browser — useless when a
+    // different person (the invitee) clicks the link in their own browser.
+    const implicitClient = createRawClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { flowType: 'implicit', persistSession: false } }
+    )
+    const { error: otpError } = await implicitClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    })
+    if (otpError) {
+      await admin
+        .from('invites')
+        .delete()
+        .eq('id', (newInvite as { id: string }).id)
+      return { error: otpError.message }
+    }
+    return { error: null }
+  }
+
   const { error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
     data: {
@@ -83,14 +117,77 @@ export async function sendInviteAction(
   })
 
   if (authError) {
-    // Roll back using the invite's own ID — precise and safe even if the
-    // email happens to match another pending invite created concurrently
-    await admin
-      .from('invites')
-      .delete()
-      .eq('id', (newInvite as { id: string }).id)
-    return { error: authError.message }
+    // If the email belongs to an existing auth user (e.g. signed up via Google),
+    // inviteUserByEmail fails but the invite row is valid — the pending invite
+    // will be auto-completed when they next sign in via Google.
+    const alreadyExists =
+      authError.message.toLowerCase().includes('already been registered') ||
+      authError.message.toLowerCase().includes('already registered') ||
+      authError.message.toLowerCase().includes('user already exists')
+
+    if (!alreadyExists) {
+      // Only roll back for unexpected errors (e.g. SMTP failure)
+      await admin
+        .from('invites')
+        .delete()
+        .eq('id', (newInvite as { id: string }).id)
+      return { error: authError.message }
+    }
   }
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// acceptInviteViaGoogleAction
+// ---------------------------------------------------------------------------
+
+export async function acceptInviteViaGoogleAction(
+  fullName: string,
+  clients?: ActionClients
+): Promise<{ error: string } | { error: null }> {
+  const supabase = clients?.supabase ?? (await createClient())
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expired. Please use the invite link again.' }
+
+  const admin = clients?.admin ?? createAdminClient()
+
+  const { data: invite } = await admin
+    .from('invites')
+    .select('*')
+    .eq('email', user.email!.toLowerCase())
+    .is('accepted_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle()
+
+  if (!invite) return { error: 'Invite not found or has expired. Ask your admin to resend it.' }
+
+  const { error: profileError } = await admin.from('profiles').upsert({
+    id: user.id,
+    org_id: invite.org_id,
+    full_name: fullName,
+    email: user.email,
+    role: invite.role as string,
+    invite_status: 'active',
+    updated_at: new Date().toISOString(),
+  })
+
+  if (profileError) return { error: profileError.message }
+
+  const deptIds = (invite.department_ids as string[] | null) ?? []
+  if (deptIds.length > 0) {
+    const { error: deptError } = await admin
+      .from('user_departments')
+      .insert(deptIds.map((department_id: string) => ({ user_id: user.id, department_id })))
+    if (deptError) return { error: deptError.message }
+  }
+
+  await admin
+    .from('invites')
+    .update({ accepted_at: new Date().toISOString() })
+    .eq('id', invite.id as string)
 
   return { error: null }
 }
