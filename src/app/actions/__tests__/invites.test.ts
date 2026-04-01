@@ -4,6 +4,12 @@ import { acceptInviteViaGoogleAction, sendInviteAction } from '../invites'
 
 import { makeChain, makeClients } from './_helpers'
 
+// Mock the raw @supabase/supabase-js client used for implicit-flow OTP
+const mockSignInWithOtp = vi.fn().mockResolvedValue({ error: null })
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({ auth: { signInWithOtp: mockSignInWithOtp } })),
+}))
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

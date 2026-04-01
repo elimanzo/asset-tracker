@@ -1,5 +1,6 @@
 'use server'
 
+import { createClient as createRawClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -84,7 +85,16 @@ export async function sendInviteAction(
     .maybeSingle()
 
   if (existingProfile) {
-    const { error: otpError } = await supabase.auth.signInWithOtp({
+    // Use a raw client with implicit flow so the magic link uses hash tokens
+    // (#access_token=…) instead of a PKCE code. signInWithOtp called server-side
+    // would store the PKCE verifier in the admin's browser — useless when a
+    // different person (the invitee) clicks the link in their own browser.
+    const implicitClient = createRawClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { flowType: 'implicit', persistSession: false } }
+    )
+    const { error: otpError } = await implicitClient.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectTo },
     })

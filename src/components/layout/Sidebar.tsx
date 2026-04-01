@@ -90,9 +90,7 @@ export function Sidebar({ onNavClick }: SidebarProps) {
   const { org } = useOrg()
   const hasOrg = !!user?.orgId
   const isAdmin = user ? canManage(user.role) : false
-  const isSettingsRoute = pathname.startsWith('/settings')
-  const visibleManageItems =
-    isAdmin && !isSettingsRoute ? buildNavManage(org?.departmentLabel ?? 'Department') : []
+  const visibleManageItems = isAdmin ? buildNavManage(org?.departmentLabel ?? 'Department') : []
 
   return (
     <div className="bg-sidebar flex h-full flex-col">
