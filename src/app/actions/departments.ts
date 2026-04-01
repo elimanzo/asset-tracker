@@ -1,8 +1,10 @@
 'use server'
 
+import { softDeleteWithCascade } from '@/lib/soft-delete'
 import { DepartmentFormSchema, type DepartmentFormInput } from '@/lib/types'
 
 import { logAudit } from './_audit'
+import type { ActionClients } from './_context'
 import { getAdminCtx, getContext } from './_context'
 
 export async function createDepartment(
@@ -74,37 +76,19 @@ export async function countAssetsInDepartment(id: string): Promise<number> {
   return count ?? 0
 }
 
-export async function deleteDepartment(id: string): Promise<{ error: string } | null> {
-  const ctx = await getAdminCtx()
-  if ('error' in ctx) return ctx
+export async function deleteDepartment(
+  id: string,
+  clients?: ActionClients
+): Promise<{ error: string } | null> {
+  const ctx = await getContext(clients)
+  if (!ctx) return { error: 'Not authenticated' }
+  const permission = ctx.requireRole('admin')
+  if (permission) return permission
 
-  const { data: dept } = await ctx.admin
-    .from('departments')
-    .select('name')
-    .eq('id', id)
-    .maybeSingle()
-
-  const { error } = await ctx.admin
-    .from('departments')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('org_id', ctx.orgId)
-
-  if (error) return { error: error.message }
-
-  // Null out department_id on assets — mirrors what ON DELETE SET NULL would do for a hard delete
-  await ctx.admin
-    .from('assets')
-    .update({ department_id: null })
-    .eq('org_id', ctx.orgId)
-    .eq('department_id', id)
-
-  await logAudit(ctx, {
+  return softDeleteWithCascade(ctx, {
+    entityTable: 'departments',
     entityType: 'department',
     entityId: id,
-    entityName: (dept?.name as string) ?? 'Unknown',
-    action: 'deleted',
+    assetFkColumn: 'department_id',
   })
-
-  return null
 }
