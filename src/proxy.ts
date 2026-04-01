@@ -73,7 +73,7 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     if (isAuthCallback || isPublicRoute) return supabaseResponse
-    if (isAppRoute || isOnboardingRoute || isInviteAccept) {
+    if (isAppRoute || isOnboardingRoute || isInviteAccept || isSettingsRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
