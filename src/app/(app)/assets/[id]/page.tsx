@@ -91,13 +91,13 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
                 Check out
               </Button>
             )}
-            {canEditAssets && !asset.isBulk && asset.status === 'checked_out' && (
+            {canEditAssets && asset.ui.secondaryAction === 'return' && (
               <Button variant="outline" size="sm" onClick={handleReturn}>
                 <LogIn className="mr-1.5 h-4 w-4" />
                 Return
               </Button>
             )}
-            {canEditAssets && asset.isBulk && (
+            {canEditAssets && asset.ui.secondaryAction === 'restock' && (
               <Button variant="outline" size="sm" onClick={() => setRestockOpen(true)}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 Restock
@@ -131,10 +131,8 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
             <h1 className="text-foreground text-2xl font-bold">{asset.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className="text-muted-foreground font-mono text-sm">{asset.assetTag}</span>
-              {asset.isBulk ? (
-                <Badge variant="secondary">
-                  {asset.available} of {asset.quantity} available
-                </Badge>
+              {asset.ui.statusBadgeText ? (
+                <Badge variant="secondary">{asset.ui.statusBadgeText}</Badge>
               ) : (
                 <AssetStatusBadge status={asset.status} />
               )}
@@ -150,9 +148,7 @@ export default function AssetDetailPage({ params }: AssetDetailPageProps) {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="assignment">
-              {asset.isBulk ? `Checked out (${asset.activeAssignments.length})` : 'Assignment'}
-            </TabsTrigger>
+            <TabsTrigger value="assignment">{asset.ui.assignmentTabLabel}</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 

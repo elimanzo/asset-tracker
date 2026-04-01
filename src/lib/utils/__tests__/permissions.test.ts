@@ -67,6 +67,15 @@ function makeAsset(departmentId: string | null = DEPT_A): SerializedAsset {
     statusLabel: 'Active',
     isAvailable: true,
     isCheckedOut: false,
+    ui: {
+      statusBadgeText: null,
+      checkoutLabel: 'asset' as const,
+      checkoutSubtitle: '— AST-00001',
+      availableQty: null,
+      assignmentTabLabel: 'Assignment',
+      secondaryAction: null,
+      assignments: [],
+    },
   }
 }
 

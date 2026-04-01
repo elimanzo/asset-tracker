@@ -51,8 +51,6 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
   const { data: departments } = useDepartments()
   const { data: locations } = useLocations()
 
-  const available = asset.isBulk ? asset.available : null
-
   const form = useForm<CheckoutFormInput>({
     resolver: zodResolver(CheckoutFormSchema),
     defaultValues: {
@@ -82,14 +80,11 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Check out {asset.isBulk ? 'items' : 'asset'}</DialogTitle>
+          <DialogTitle>Check out {asset.ui.checkoutLabel}</DialogTitle>
         </DialogHeader>
         <p className="text-muted-foreground text-sm">
           <span className="text-foreground font-medium">{asset.name}</span>
-          {asset.isBulk && available !== null && (
-            <span className="ml-2">— {available} available</span>
-          )}
-          {!asset.isBulk && <span> &mdash; {asset.assetTag}</span>}
+          <span className="ml-2">{asset.ui.checkoutSubtitle}</span>
         </p>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -107,7 +102,7 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
               )}
             />
 
-            {asset.isBulk && (
+            {asset.ui.availableQty !== null && (
               <FormField
                 control={form.control}
                 name="quantity"
@@ -118,15 +113,15 @@ export function CheckoutModal({ asset, open, onOpenChange, onSuccess }: Checkout
                       <Input
                         type="number"
                         min={1}
-                        max={available ?? undefined}
+                        max={asset.ui.availableQty ?? undefined}
                         step={1}
                         value={field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
-                    {available !== null && (
-                      <FormDescription className="text-xs">{available} in stock</FormDescription>
-                    )}
+                    <FormDescription className="text-xs">
+                      {asset.ui.availableQty} in stock
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
