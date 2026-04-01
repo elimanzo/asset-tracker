@@ -38,12 +38,18 @@ export function makeChain() {
 
 export function makeClients(
   chain: ReturnType<typeof makeChain>,
-  opts: { userId?: string; email?: string; inviteUserByEmail?: ReturnType<typeof vi.fn> } = {}
+  opts: {
+    userId?: string
+    email?: string
+    inviteUserByEmail?: ReturnType<typeof vi.fn>
+    rpc?: ReturnType<typeof vi.fn>
+  } = {}
 ): ActionClients {
   const {
     userId = 'user-actor-0001',
     email = 'actor@example.com',
     inviteUserByEmail = vi.fn().mockResolvedValue({ error: null }),
+    rpc = vi.fn().mockResolvedValue({ error: null }),
   } = opts
 
   return {
@@ -55,6 +61,7 @@ export function makeClients(
     } as unknown as NonNullable<ActionClients['supabase']>,
     admin: {
       from: vi.fn().mockReturnValue(chain),
+      rpc,
       auth: { admin: { inviteUserByEmail, deleteUser: vi.fn().mockResolvedValue({}) } },
     } as unknown as NonNullable<ActionClients['admin']>,
   }
