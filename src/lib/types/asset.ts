@@ -90,6 +90,24 @@ type AssetRelations = {
   vendorName: string | null
 }
 
+/** Pre-computed view-layer fields — eliminates isBulk branching in UI components. */
+export type AssetUI = {
+  /** null = render <AssetStatusBadge>; string = render <Badge variant="secondary"> */
+  statusBadgeText: string | null
+  /** "items" for bulk, "asset" for serialized — used in CheckoutModal title */
+  checkoutLabel: 'items' | 'asset'
+  /** "— 4 available" for bulk, "— TAG-001" for serialized */
+  checkoutSubtitle: string
+  /** null = don't render quantity field; number = max for the quantity input */
+  availableQty: number | null
+  /** "Checked out (3)" for bulk, "Assignment" for serialized */
+  assignmentTabLabel: string
+  /** Which secondary action button to show in the detail header */
+  secondaryAction: 'restock' | 'return' | null
+  /** Normalized assignment list — serialized gets [] or [currentAssignment] */
+  assignments: AssetAssignment[]
+}
+
 /** Pre-computed display fields available on every asset regardless of kind. */
 type AssetDisplay = {
   /** "Alice" for serialized, "Alice +2 others" for bulk with multiple, null if unassigned. */
@@ -99,6 +117,7 @@ type AssetDisplay = {
   /** True if the asset can be checked out right now — uniform gate, no branching needed. */
   isAvailable: boolean
   isCheckedOut: boolean
+  ui: AssetUI
 }
 
 export type BulkAsset = Asset &

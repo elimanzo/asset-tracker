@@ -175,10 +175,10 @@ export function AssetTable({ assets }: AssetTableProps) {
       header: 'Status',
       cell: ({ row }) => {
         const asset = row.original
-        if (asset.isBulk) {
+        if (asset.ui.statusBadgeText) {
           return (
             <Badge variant="secondary" className="text-xs">
-              {asset.available}/{asset.quantity} avail.
+              {asset.ui.statusBadgeText}
             </Badge>
           )
         }

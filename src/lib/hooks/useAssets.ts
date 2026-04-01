@@ -65,7 +65,7 @@ function mapAssignment(a: AssignmentRow, assetId: string): AssetAssignment {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapAssetRow(row: any): TypedAsset {
+export function mapAssetRow(row: any): TypedAsset {
   const assignments: AssignmentRow[] = row.asset_assignments ?? []
   const activeRows = assignments.filter((a) => a.returned_at === null)
   const activeAssignments = activeRows.map((a) => mapAssignment(a, row.id as string))
@@ -116,16 +116,35 @@ function mapAssetRow(row: any): TypedAsset {
       activeAssignments,
       isAvailable: available > 0,
       statusLabel: `${available}/${row.quantity as number} avail.`,
+      ui: {
+        statusBadgeText: `${available}/${row.quantity as number} avail.`,
+        checkoutLabel: 'items',
+        checkoutSubtitle: `— ${available} available`,
+        availableQty: available,
+        assignmentTabLabel: `Checked out (${activeAssignments.length})`,
+        secondaryAction: 'restock',
+        assignments: activeAssignments,
+      },
     } satisfies BulkAsset
   }
 
+  const currentAssignment = activeAssignments[0] ?? null
   return {
     ...base,
     isBulk: false,
     quantity: null,
-    currentAssignment: activeAssignments[0] ?? null,
+    currentAssignment,
     isAvailable: activeAssignments.length === 0,
     statusLabel: ASSET_STATUS_LABELS[row.status as AssetStatus],
+    ui: {
+      statusBadgeText: null,
+      checkoutLabel: 'asset',
+      checkoutSubtitle: `— ${base.assetTag}`,
+      availableQty: null,
+      assignmentTabLabel: 'Assignment',
+      secondaryAction: (row.status as string) === 'checked_out' ? 'return' : null,
+      assignments: currentAssignment ? [currentAssignment] : [],
+    },
   } satisfies SerializedAsset
 }
 
