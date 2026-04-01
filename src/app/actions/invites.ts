@@ -74,6 +74,30 @@ export async function sendInviteAction(
   const next = `/invite/accept?org=${encodeURIComponent(orgName)}`
   const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
+  // Check if an auth user already exists for this email (e.g. they previously had an org
+  // and deleted it, or left). inviteUserByEmail fails for existing users, so send a magic
+  // link instead — they'll sign in and land on the invite accept page.
+  const { data: existingProfile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existingProfile) {
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    })
+    if (otpError) {
+      await admin
+        .from('invites')
+        .delete()
+        .eq('id', (newInvite as { id: string }).id)
+      return { error: otpError.message }
+    }
+    return { error: null }
+  }
+
   const { error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
     data: {

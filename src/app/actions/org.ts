@@ -27,7 +27,7 @@ export async function completeOnboardingSetup(
   org: { name: string; slug: string },
   departments: string[],
   categories: string[]
-): Promise<{ error: string } | never> {
+): Promise<{ error: string } | { error: null }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -67,7 +67,8 @@ export async function completeOnboardingSetup(
     await admin.from('categories').insert(categories.map((name) => ({ name, org_id: orgData.id })))
   }
 
-  redirect('/dashboard')
+  // Return success — client will do a full-page navigation to flush stale AuthProvider state
+  return { error: null }
 }
 
 export async function createOrganization(
