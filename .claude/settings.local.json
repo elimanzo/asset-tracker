@@ -12,7 +12,11 @@
       "Bash(ls:*)",
       "Bash(pnpm build:*)",
       "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(cat \"/Users/eli/Desktop/asset-tracker/src/app/\\(app\\)/assets/[id]/page.tsx\")",
+      "Read(//Users/eli/.claude/**)",
+      "Bash(git checkout:*)",
+      "Bash(pnpm tsc:*)"
     ]
   }
 }
